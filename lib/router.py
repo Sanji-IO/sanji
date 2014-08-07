@@ -1,5 +1,6 @@
 import re
 import logging
+import urlparse
 from functools import wraps
 
 logger = logging.getLogger()
@@ -8,31 +9,15 @@ def trim_uri(uri):
 	return uri.strip(" \t\n\r/")
 
 def parse_querystring(querystring):
-	query = dict()
-
-	if (querystring == None):
-		return query
-
-	for pair in querystring.split("&"):
-		if len(pair) == 0:
+	qsDict = urlparse.parse_qs(querystring, keep_blank_values=True)
+	for key in qsDict:
+		if len(qsDict[key]) != 1:
 			continue
-		values = pair.split("=", 2)
-		if (len(values) == 0):
-			continue
-		elif (len(values) == 1):
-			value = True
-		else:
-			value = values[1]
+		qsDict[key] = qsDict[key][0]
+		if qsDict[key] == '':
+			qsDict[key] = True
 
-		if values[0] in query.keys():
-			if isinstance(query[values[0]], list):
-				query[values[0]].append(value)
-			else:
-				query[values[0]] = [query[values[0]], value]
-		else:
-			query[values[0]] = value
-
-	return query
+	return qsDict
 
 def compile_uri(uri):
 	return re.compile(
