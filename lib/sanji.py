@@ -10,6 +10,7 @@ import sqlite3
 import glob
 import inspect 	# for debug frame
 import os
+import shutil
 
 from router import *
 from random import randint
@@ -44,8 +45,44 @@ class Sanji(object):
 	'''
 	' This is for sanji framework.
 	'''
-	def __init__(self, role, ttl, hook, name, tunnel="temp", client_id="unknown", topic="sanji", resources=list(), 
-		description="This is a example."):
+	def __init__(self, model_name, model_path):
+		self.model_name = model_name
+		self.model_path = model_path
+		self.model_initiator = ModelInitiator(self.model_name, self.model_path)
+		self.model_initiator.mkdir()
+		self.model_initiator.create_db()
+		
+
+
+class ModelInitiator(object):
+	'''
+	'	Deal with some model initialization works like DB and Condifuration files creating.
+	'''
+	def __init__(self, model_name, model_path, db_type="json"):
+		self.model_name = model_name
+		self.model_path = model_path
+		self.db_type = db_type
+		
+
+	def mkdir(self):
+		data_folder_path = self.model_path + "/data"
+
+		if not os.path.exists(data_folder_path):
+			os.mkdir(data_folder_path)
+		
+
+	def create_db(self):
+		factory_json_db_path = self.model_path + "/data/" + self.model_name + ".factory.json"
+		json_db_path = self.model_path + "/data/" + self.model_name + ".json"
+		
+		if self.db_type == "json":
+			if not os.path.exists(json_db_path):
+				if os.path.exists(factory_json_db_path):
+					shutil.copy2(factory_json_db_path, json_db_path)
+
+
+	def __del__(self):
+		pass
 
 
 
@@ -94,15 +131,11 @@ class Session(object):
 
 
 
-class ModelInitiator(object):
-	'''
-	'	Deal with some model initialization works like DB and Condifuration files creating.
-	'''
-	def __init__(self):
-		pass
 
-	def __del__(self):
-		pass
+
+
+
+
 
 
 class JsonDB(object):
@@ -111,8 +144,12 @@ class JsonDB(object):
 
 
 
+
+
 class Model2Model(object):
 	def __init__(self):
 		pass
 
 
+if __name__ == '__main__':
+	pass
