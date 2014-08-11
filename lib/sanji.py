@@ -8,7 +8,7 @@ import logging
 import sys
 import sqlite3
 import glob
-import inspect
+import inspect 	# for debug frame
 import os
 
 from router import *
@@ -17,7 +17,7 @@ from threading import Thread
 from threading import Lock
 from datetime import datetime
 
-import os
+
 path_root = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(path_root + '/../')
 from sanjilogger import *
@@ -947,3 +947,16 @@ class Session:
 		t = Thread(target=self.aging)
 		t.daemon = True
 		t.start()
+
+
+
+
+class ModelInitiator(object):
+	'''
+	'	Deal with some model initialization works like DB and Condifuration files creating.
+	'''
+	def __init__(self):
+		pass
+
+	def __del__(self):
+		pass

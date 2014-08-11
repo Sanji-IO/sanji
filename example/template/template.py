@@ -10,10 +10,10 @@ import time
 
 import os
 path_root = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(path_root + "/../../pylib/sanji/")
-from sql import SQL
+
+sys.path.append(path_root + "/../../lib/")
+
 import sanji
-sys.path.append(path_root + "/../../pylib/")
 from sanjilogger import *
 
 
@@ -21,13 +21,15 @@ CODE_OK = 200
 CODE_BAD_REQUEST = 400
 CODE_INTERNAL_SERVER_ERROR = 500
 
+model_name = "template"
+
 # Sanji's model profile (for MQTT usage)
 sanji_profile = {
-			"client_id": "snmpd",
-			"tunnel": "/snmpd",
-			"name": "snmpd",
-			"description": "snmpd",
-			"resources": ["/network/snmpd"],
+			"client_id": model_name,
+			"tunnel": "/" + model_name,
+			"name": model_name,
+			"description": model_name,
+			"resources": ["/system" + "/" + model_name],
 			"role": "model",
 			"ttl": 60,
 			"hook": [],
@@ -36,10 +38,8 @@ sanji_profile = {
 
 # Model's profile. (for Model usage)
 model_profile = {
-			"model_sql": path_root + "/db/snmpd.sql",
-			"model_db": path_root + "/db/snmpd.db",
-			"snmpd_config": path_root + "/config/snmpd.conf",
-			"snmpd_config_target_path": "/etc/snmp/snmpd.conf",
+			"model_db": path_root + "/db/snmpd.json",
+			"model_factory_db": path_root + "/db/snmpd.json",
 		}
 
 class Snmpd:
