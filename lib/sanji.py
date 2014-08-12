@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import paho.mqtt.client as mqtt 
+"""
+This is s Sanji Onject
+"""
+import paho.mqtt.client as mqtt
 from router import *
 from random import randint
 from threading import Thread
@@ -9,20 +12,20 @@ import signal
 import sys
 import os
 import router
+import shutil
 
 
-
-'''
+"""
 Status Codes
-'''
+"""
 CODE_OK = 200
 CODE_BAD_REQUEST = 400
 CODE_INTERNAL_SERVER_ERROR = 500
 
 
-'''
+"""
 Environment Variables
-'''
+"""
 BROKER_IP = os.getenv("BROKER_IP", "127.0.0.1")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
@@ -40,24 +43,19 @@ class Sanji(object):
             "keepalive": 60
         }
 
-        keepalive=60
+        for (prop, default) in defaults.iteritems():
+            setattr(self, prop, kwargs.get(prop, default))
+
         self._mqtt = mqtt.Client()
-        self.model_name = model_name
-        self.model_path = model_path
-        self.model_initiator = ModelInitiator(self.model_name, self.model_path)
+        self.router = router.Router()
+        self.model_initiator = ModelInitiator(getattr("model_name"), getattr("model_path"))
         self.model_initiator.mkdir()
         self.model_initiator.create_db()
-    
-        # setup variable
-        self.ip = ip
-        self.port = port
-        self.keepalive = keepalive
-        self.router = router.Router()
 
         # setup callbacks
         self._mqtt.on_connect = self._mqtt_on_connect
         self._mqtt.on_message = self._mqtt_on_message
-        
+
         signal.signal(signal.SIGINT, self.exit)
 
         self.init()
@@ -66,6 +64,12 @@ class Sanji(object):
         pass
 
     def _mqtt_on_message(self, mqttc, obj, msg):
+        """This function will recevie all message from mqtt
+        Args:
+            None
+        Retruns:
+            None
+        """
         print(msg.topic+" "+str(msg.payload))
 
     def _mqtt_on_connect(self, mqttc, obj, flags, rc):
@@ -79,27 +83,6 @@ class Sanji(object):
     def exit(self, signal, frame):
         self._mqtt.loop_stop()
         sys.exit(0)
-
-        #client = mqtt.Client()
-        client = mosquitto.Mosquitto(client_id="38129")
-        client.on_connect = self.on_connect
-        client.on_message = self.on_message
-        client.on_publish = self.on_publish
-        client.on_subscribe = self.on_subscribe
-        client.on_log = self.on_log
-
-
-        print "start to connect"
-        client.connect("127.0.0.1", 1883, 60)
-        print "end connect"
-
-        # Blocking call that processes network traffic, dispatches callbacks and
-        # handles reconnecting.
-        # Other loop*() functions are available that give a threaded interface and a
-        # manual interface.
-        client.loop_forever()
-
-
 
     def on_connect(mqttc, obj, flags, rc):
         print("rc: "+str(rc))
