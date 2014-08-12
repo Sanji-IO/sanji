@@ -12,6 +12,9 @@ import inspect 	# for debug frame
 import os
 import shutil
 
+import paho.mqtt.client as mqtt
+
+
 from router import *
 from random import randint
 from threading import Thread
@@ -52,6 +55,38 @@ class Sanji(object):
 		self.model_initiator.mkdir()
 		self.model_initiator.create_db()
 		
+
+		#client = mqtt.Client()
+		client = mosquitto.Mosquitto(client_id="38129")
+		client.on_connect = self.on_connect
+		client.on_message = self.on_message
+		client.on_publish = self.on_publish
+		client.on_subscribe = self.on_subscribe
+		client.on_log = self.on_log
+
+
+		print "start to connect"
+		client.connect("127.0.0.1", 1883, 60)
+		print "end connect"
+
+		# Blocking call that processes network traffic, dispatches callbacks and
+		# handles reconnecting.
+		# Other loop*() functions are available that give a threaded interface and a
+		# manual interface.
+		client.loop_forever()
+
+
+
+	def on_connect(mqttc, obj, flags, rc):
+		print("rc: "+str(rc))
+	def on_message(mqttc, obj, msg):
+		print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))
+	def on_publish(mqttc, obj, mid):
+		print("mid: "+str(mid))
+	def on_subscribe(mqttc, obj, mid, granted_qos):
+		print("Subscribed: "+str(mid)+" "+str(granted_qos))
+	def on_log(mqttc, obj, level, string):
+		print(string)
 
 
 class ModelInitiator(object):

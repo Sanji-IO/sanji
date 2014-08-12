@@ -8,6 +8,8 @@ import logging
 import subprocess
 import time
 
+
+
 import os
 path_root = os.path.abspath(os.path.dirname(__file__))
 
@@ -45,7 +47,6 @@ model_profile = {
 class Template(Sanji):
 	def __init__(self, *args, **kwargs):
 		super(Template, self).__init__(model_name, path_root)
-		
 		
 
 
