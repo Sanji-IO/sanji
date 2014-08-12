@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import os
+import shutil
 
 class ModelInitiator(object):
     """
-    "   Deal with some model initialization works like DB and Condifuration files creating.
+    "   Deal with some model initialization works like DB
+    "   and Condifuration files creating.
     """
     def __init__(self, model_name, model_path, db_type="json"):
         self.model_name = model_name
@@ -12,13 +15,20 @@ class ModelInitiator(object):
         self.db_type = db_type
 
     def mkdir(self):
+        """
+        "   Make a data folder for model
+        """
         data_folder_path = self.model_path + "/data"
 
         if not os.path.exists(data_folder_path):
             os.mkdir(data_folder_path)
 
     def create_db(self):
-        factory_json_db_path = self.model_path + "/data/" + self.model_name + ".factory.json"
+        """
+        "   Create a db file for model.
+        """
+        factory_json_db_path = self.model_path + "/data/" + self.model_name + \
+                                ".factory.json"
         json_db_path = self.model_path + "/data/" + self.model_name + ".json"
 
         if self.db_type == "json":
@@ -29,3 +39,4 @@ class ModelInitiator(object):
 
     def __del__(self):
         pass
+        
