@@ -116,27 +116,10 @@ class Sanji(object):
 
 
 
-class SanjiJSON(object):
-    '''
-    ' Provide JSON operations.
-    ' Format Example:
-        {
-            "id":3,
-            "method":"get",
-            "resource": "/services",
-            "code": 200,
-            "data": {
-                "resources":["http_server","dhcp_server"]
-            }
-        }
-    '''
-    def __init__(self, model_name):
-        pass
 
 
-class Model2Model(object):
-    def __init__(self):
-        pass
+
+
 
 
 if __name__ == '__main__':

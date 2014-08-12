@@ -3,9 +3,9 @@
 
 
 class ModelInitiator(object):
-    '''
-    '   Deal with some model initialization works like DB and Condifuration files creating.
-    '''
+    """
+    "   Deal with some model initialization works like DB and Condifuration files creating.
+    """
     def __init__(self, model_name, model_path, db_type="json"):
         self.model_name = model_name
         self.model_path = model_path
