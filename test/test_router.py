@@ -95,7 +95,7 @@ class TestRouteClass(unittest.TestCase):
         def callback():
             print "test callback"
         func(callback)
-        
+
         self.assertEqual(len(self.route.handlers), 1)
         self.assertEqual(self.route.handlers[0]['method'], "get")
         self.assertEqual(self.route.handlers[0]['callback'], callback)
@@ -107,14 +107,12 @@ class TestRouteClass(unittest.TestCase):
             data=dict()
         )
 
-        response = "fake response mock"
-
-        def callback(req, res):
-            self.assertEqual(req, request)
-            self.assertEqual(res, response)
+        def callback(req):
+            print req
 
         self.route.get(callback)
-        self.route.dispatch(request, response)
+        self.assertEqual(len(self.route.dispatch(request)), 1)
+        self.route.dispatch(request)[0](request)
 
 
 class TestRouterClass(unittest.TestCase):
@@ -160,7 +158,7 @@ class TestRouterClass(unittest.TestCase):
             "data": {}
         }
 
-        reqquest_data = {
+        request_data = {
             "uri": "test/resource/112?aaa=bbb",
             "method": "get",
             "param": {
@@ -178,23 +176,31 @@ class TestRouterClass(unittest.TestCase):
         def callback(method):
             def _cb(req, res):
                 print "[%s] callback!" % method
-                reqquest_data["method"] = method
-                self.assertEqual(req, reqquest_data)
+                request_data["method"] = method
+                self.assertEqual(req, request_data)
                 self.assertEqual(res, response)
 
             return _cb
 
-        self.router.get("/test/resource/:id", callback("get"))
-        self.router.post("/test/resource/:id", callback("post"))
-        self.router.route("/test/resource/:id") \
-            .get(callback("get")) \
-            .post(callback("post")) \
-            .delete(callback("delete")) \
-            .put(callback("put"))
 
-        for method in ["get", "post", "delete", "put"]:
-            request["method"] = method
-            self.router.dispatch(request, response)
+        for times in range(1, 3):
+            self.router.post("/test/resource/", callback("post"))
+            self.router.route("/test/resource/:id") \
+                .get(callback("get")) \
+                .post(callback("post")) \
+                .delete(callback("delete")) \
+                .put(callback("put"))
+
+            for method in ["get", "post", "delete", "put"]:
+                request["method"] = method
+                request_data["method"] = method
+                dispatch_result = self.router.dispatch(request)
+
+                self.assertEqual(len(dispatch_result[0]["callbacks"]), 1)
+                self.assertEqual(len(dispatch_result), times)
+                self.assertEqual(dispatch_result[0]['req'], request_data)
+
+        # test dispatch threading
 
 if __name__ == "__main__":
     unittest.main()
