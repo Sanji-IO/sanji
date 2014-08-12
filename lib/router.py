@@ -1,12 +1,11 @@
 import re
 import logging
 import urlparse
-from functools import wraps
 
-logger = logging.getLogger()
 
 def trim_uri(uri):
 	return uri.strip(" \t\n\r/")
+
 
 def parse_querystring(querystring):
 	qsDict = urlparse.parse_qs(querystring, keep_blank_values=True)
@@ -18,6 +17,7 @@ def parse_querystring(querystring):
 			qsDict[key] = True
 
 	return qsDict
+
 
 def compile_uri(uri):
 	return re.compile(
@@ -52,6 +52,7 @@ class Route(object):
 			# fire
 			handler["callback"](request, response)
 
+
 class Router(object):
 
 	def __init__(self):
@@ -81,21 +82,21 @@ class Router(object):
 
 		# match routes
 		for route in self.routes:
-			print route
+			print route.uri
 
 			s = route.uriRegex.search(uri)
 			if s == None:
 				continue
 
 			# build params and querystring
-			querystring = s.groupdict().pop("querystring", None)
+			querystring = s.groupdict().pop("querystring", "")
 			req = dict(
 				method = method,
 				uri = uri,
 				param = s.groupdict(),
-				query = Router.parse_querystring(querystring),
+				query = parse_querystring(querystring),
 				data = data
 			)
 
-			logger.debug("Invoke route: [%s] %s" % (method, route.uri))
+			# logger.debug("Invoke route: [%s] %s" % (method, route.uri))
 			route.dispatch(req, response)

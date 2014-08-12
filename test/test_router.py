@@ -38,6 +38,11 @@ class TestFunctions(unittest.TestCase):
 			{'abc': '123', 'cde': '456', 'async': True}
 		)
 
+		self.assertEqual(
+			router.parse_querystring("&&&&abc=123&&&&cde=456&&&&&async=false"),
+			{'abc': '123', 'cde': '456', 'async': 'false'}
+		)
+
 	def test_compile_uri(self):
 		self.assertEqual(
 			router.compile_uri('/abc/:id').pattern,
@@ -149,7 +154,21 @@ class TestRouterClass(unittest.TestCase):
 		self.assertItemsEqual(self.router.routes[3].handlers, route.handlers)
 
 	def test_dispatch(self):
-		pass
+		request = dict(
+			resource="/test/resource/123?aaa=bbb",
+			method="get",
+			data=dict()
+		)
+
+		response = "fake response mock"
+
+		def callback(req, res):
+			self.assertEqual(req, request)
+			self.assertEqual(res, response)
+
+		self.router.get("/test/resource/:id", callback)
+		#self.router.router("/test/resource/Lid", callback)
+		self.router.dispatch(request, response)
 
 if __name__ == "__main__":
     unittest.main()

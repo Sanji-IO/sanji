@@ -1,57 +1,73 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-import mosquitto
-import json
-import time
-import copy
-import logging
-import sys
-import sqlite3
-import glob
-import inspect 	# for debug frame
-import os
-import shutil
 
-from router import *
-from random import randint
+import paho.mqtt.client as mqtt
 from threading import Thread
-from threading import Lock
-from datetime import datetime
+import signal
+import sys
+import os
+import router
 
-
-path_root = os.path.abspath(os.path.dirname(__file__))
-sys.path.append(path_root + '/../')
-from sanjilogger import *
-
-
+'''
+Status Codes
+'''
 CODE_OK = 200
 CODE_BAD_REQUEST = 400
 CODE_INTERNAL_SERVER_ERROR = 500
 
 
-try:
-	broker_ip = os.environ['BROKER_IP']
-except:
-	broker_ip = "127.0.0.1"
-
-try:
-	broker_port = int(os.environ['BROKER_PORT'])
-except:
-	broker_port = 1883
-
+'''
+Environment Variables
+'''
+BROKER_IP = os.getenv("BROKER_IP", "127.0.0.1")
+BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
 
 class Sanji(object):
 	'''
 	' This is for sanji framework.
 	'''
-	def __init__(self, model_name, model_path):
+	def __init__(self, model_name, model_path, ip=BROKER_IP, port=BROKER_PORT, keepalive=60):
+		self._mqtt = mqtt.Client()
 		self.model_name = model_name
 		self.model_path = model_path
 		self.model_initiator = ModelInitiator(self.model_name, self.model_path)
 		self.model_initiator.mkdir()
 		self.model_initiator.create_db()
+	
+		# setup variable
+		self.ip = ip
+		self.port = port
+		self.keepalive = keepalive
+		self.isShutdown = False
+		self.router = router.Router()
+
+		# setup callbacks
+		self._mqtt.on_connect = self._mqtt_on_connect
+		self._mqtt.on_message = self._mqtt_on_message
 		
+		signal.signal(signal.SIGINT, self.exit)
+
+		self.init()
+
+	def init(self):
+		pass
+
+	def _mqtt_on_message(self, mqttc, obj, msg):
+		print(msg.topic+" "+str(msg.payload))
+
+	def _mqtt_on_connect(self, mqttc, obj, flags, rc):
+		print("Connected with result code "+str(rc))
+		mqttc.subscribe("#")
+
+	def run(self):
+		self._mqtt.connect(self.ip, self.port, self.keepalive)
+		self._mqtt.loop_forever()
+
+	def exit(self, signal, frame):
+		self._mqtt.loop_stop()
+		self.isShutdown = True
+		sys.exit(0)
 
 
 class ModelInitiator(object):
@@ -102,48 +118,6 @@ class SanjiJSON(object):
 	'''
 	def __init__(self, model_name):
 		pass
-
-
-		
-
-
-class SanjiURI(object):
-	'''
-	' Provide URI operations.
-	' We could use URI parser to parsing uri in resources.
-	'''
-	def __init__(self, model_name):
-		self.resource_dict = {"index": "", 			# 7
-								"full_name": "", 	# /network/ethernet
-								"full_uri": "", 	# /network/ethernet/7
-								"short_name": "", 	# /ethernet
-							}
-
-		pass
-
-
-
-
-
-class Session(object):
-	def __init__(self):
-		pass
-
-
-
-
-
-
-
-
-
-
-class JsonDB(object):
-	def __init__(self):
-		pass
-
-
-
 
 
 class Model2Model(object):

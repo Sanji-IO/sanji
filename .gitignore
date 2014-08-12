@@ -12,8 +12,11 @@ build/
 develop-eggs/
 dist/
 eggs/
+<<<<<<< Updated upstream
 
 lib64/
+=======
+>>>>>>> Stashed changes
 parts/
 sdist/
 var/
