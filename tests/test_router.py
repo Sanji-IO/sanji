@@ -1,9 +1,9 @@
 import unittest
-
+import sys
 try:
     sys.path.append('../src')
     import router
-except ImportError as e:
+except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
 

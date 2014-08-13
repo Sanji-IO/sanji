@@ -3,7 +3,7 @@ import sys
 try:
     sys.path.append('../src')
     from model_initiator import ModelInitiator
-except ImportError as e:
+except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
 
@@ -28,7 +28,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         os.mkdir(self.model_path)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
-    
+
+
     def tearDown(self):
         """
         " Clean up
@@ -53,7 +54,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         result = self.model_initaitor.mkdir()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db_folder))
-
 
 
     def test_create_db(self):

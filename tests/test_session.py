@@ -6,7 +6,7 @@ import unittest
 try:
     sys.path.append('../src')
     import session
-except ImportError as e:
+except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
 
