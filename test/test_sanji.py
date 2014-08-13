@@ -8,8 +8,8 @@ class Model(sanji.Sanji):
 	
 	def init(self):
 		print "init"
-		self.router.route("/model/:id")
-			.get(self.get)
+		self.router.route("/model/:id") \
+			.get(self.get) \
 			.post(self.post)
 
 	def get(self, request, response):
