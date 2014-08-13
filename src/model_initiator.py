@@ -12,30 +12,44 @@ class ModelInitiator(object):
     def __init__(self, model_name, model_path, db_type="json"):
         self.model_name = model_name
         self.model_path = model_path
+        self.data_folder_path = self.model_path + "/data"
+        self.factory_json_db_path = self.model_path + "/data/" + self.model_name + \
+                                ".factory.json"
+        self.json_db_path = self.model_path + "/data/" + self.model_name + ".json"
         self.db_type = db_type
+        
 
     def mkdir(self):
         """
         "   Make a data folder for model
         """
-        data_folder_path = self.model_path + "/data"
+        try:
+            if not os.path.exists(self.data_folder_path):
+                os.mkdir(self.data_folder_path)
 
-        if not os.path.exists(data_folder_path):
-            os.mkdir(data_folder_path)
+            return True
+            
+        except:
+            return False
+
 
     def create_db(self):
         """
         "   Create a db file for model.
         """
-        factory_json_db_path = self.model_path + "/data/" + self.model_name + \
+        self.factory_json_db_path = self.model_path + "/data/" + self.model_name + \
                                 ".factory.json"
-        json_db_path = self.model_path + "/data/" + self.model_name + ".json"
+        self.json_db_path = self.model_path + "/data/" + self.model_name + ".json"
 
         if self.db_type == "json":
-            if not os.path.exists(json_db_path):
-                if os.path.exists(factory_json_db_path):
-                    shutil.copy2(factory_json_db_path, json_db_path)
+            if not os.path.exists(self.json_db_path):
+                if os.path.exists(self.factory_json_db_path):
+                    shutil.copy2(self.factory_json_db_path, self.json_db_path)
+                    return True
+                else:
+                    print "NO: " + self.factory_json_db_path
 
+        return False
 
     def __del__(self):
         pass
