@@ -4,16 +4,15 @@
 """
 This is s Sanji Onject
 """
+
 import paho.mqtt.client as mqtt
-from router import *
-from random import randint
 from threading import Thread
 import signal
 import sys
 import os
 import router
-import shutil
-
+import model_initiator
+import uuid
 
 """
 Status Codes
@@ -40,6 +39,7 @@ class Sanji(object):
             "model_path": "",
             "ip": BROKER_IP,
             "port": BROKER_PORT,
+            "tunnel": uuid.uuid4(),
             "keepalive": 60
         }
 
@@ -48,7 +48,8 @@ class Sanji(object):
 
         self._mqtt = mqtt.Client()
         self.router = router.Router()
-        self.model_initiator = ModelInitiator(getattr("model_name"), getattr("model_path"))
+        self.model_initiator = model_initiator.ModelInitiator( \
+            getattr("model_name"), getattr("model_path"))
         self.model_initiator.mkdir()
         self.model_initiator.create_db()
 
@@ -70,38 +71,27 @@ class Sanji(object):
         Retruns:
             None
         """
-        print(msg.topic+" "+str(msg.payload))
+        print msg.topic+" "+str(msg.payload)
 
     def _mqtt_on_connect(self, mqttc, obj, flags, rc):
-        print("Connected with result code "+str(rc))
+        print "Connected with result code "+str(rc)
+        self._set_tunnel(self.tunnel)
         mqttc.subscribe("#")
 
+    def _set_tunnel(self, tunnel):
+        if self.tunnel != None:
+            self._mqtt.unsubscribe(str(elf.tunnel))
+
+        self.tunnel = tunnel
+        self._mqtt.subscribe(str(self.tunnel))
+
     def run(self):
-        self._mqtt.connect(self.ip, self.port, self.keepalive)
+        self._mqtt.connect(getattr("ip"), getattr("port"), getattr("keepalive"))
         self._mqtt.loop_forever()
 
     def exit(self, signal, frame):
         self._mqtt.loop_stop()
         sys.exit(0)
-
-    def on_connect(mqttc, obj, flags, rc):
-        print("rc: "+str(rc))
-    def on_message(mqttc, obj, msg):
-        print(msg.topic+" "+str(msg.qos)+" "+str(msg.payload))
-    def on_publish(mqttc, obj, mid):
-        print("mid: "+str(mid))
-    def on_subscribe(mqttc, obj, mid, granted_qos):
-        print("Subscribed: "+str(mid)+" "+str(granted_qos))
-    def on_log(mqttc, obj, level, string):
-        print(string)
-
-
-
-
-
-
-
-
 
 
 
