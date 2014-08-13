@@ -31,16 +31,9 @@ class DictSQL(object):
         pass
 
 
+
+
+
+
 if __name__ == '__main__':
-    ds = DictSQL('test.db')
-    ds.print_db()
-    ds.show_tables()
-    A = dict()
-    A["a"] = 3
-    try:
-        A["a"]["b"] = 5
-    except Exception as e:
-        print "No folder"
-        print e
-
-
+    pass
