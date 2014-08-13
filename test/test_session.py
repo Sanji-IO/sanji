@@ -2,8 +2,13 @@ import os
 import sys
 
 import unittest
-import session
 
+try:
+    sys.path.append('../src')
+    import session
+except ImportError as e:
+    print "Please check the python PATH for import test module."
+    exit(1)
 
 class TestEventClass(unittest.TestCase):
 

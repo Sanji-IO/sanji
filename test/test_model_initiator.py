@@ -1,5 +1,11 @@
 import unittest
-from model_initiator import ModelInitiator
+import sys
+try:
+    sys.path.append('../src')
+    from model_initiator import ModelInitiator
+except ImportError as e:
+    print "Please check the python PATH for import test module."
+    exit(1)
 
 import os
 import shutil
@@ -58,8 +64,11 @@ class TestModelInitiatorClass(unittest.TestCase):
         try:
             with open(self.model_factory_db, 'a'):
                 os.utime(self.model_factory_db, None)
-        except:
-            self.assertTrue(False)
+        except Exception:
+            self.fail("Maybe there is no folder to create file.")
+
+        self.assertRaises(self.model_initaitor.create_db)
+
         result = self.model_initaitor.create_db()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db))
