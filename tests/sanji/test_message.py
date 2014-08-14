@@ -3,8 +3,8 @@ import sys
 import os
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../sanji')
-    from sanji_message import SanjiMessage, SanjiMessageType
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
+    from message import SanjiMessage, SanjiMessageType
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)

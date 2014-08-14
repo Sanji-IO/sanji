@@ -10,8 +10,9 @@ from threading import Thread
 import signal
 import sys
 import os
-import router
-import model_initiator
+from .model_initiator import ModelInitiator
+from .router import Router
+from .message
 import uuid
 
 """
@@ -40,18 +41,20 @@ class Sanji(object):
             "ip": BROKER_IP,
             "port": BROKER_PORT,
             "tunnel": uuid.uuid4(),
-            "keepalive": 60
+            "keepalive": 60,
+            "threads": 10
         }
 
         for (prop, default) in defaults.iteritems():
             setattr(self, prop, kwargs.get(prop, default))
 
         self._mqtt = mqtt.Client()
-        self.router = router.Router()
-        self.model_initiator = model_initiator.ModelInitiator( \
-            getattr("model_name"), getattr("model_path"))
-        self.model_initiator.mkdir()
-        self.model_initiator.create_db()
+        self.router = Router()
+        self.tunnel = None
+        #self.model_initiator = ModelInitiator( \
+        #    getattr(self, "model_name"), getattr(self, "model_path"))
+        #self.model_initiator.mkdir()
+        #self.model_initiator.create_db()
 
         # setup callbacks
         self._mqtt.on_connect = self._mqtt_on_connect
@@ -62,6 +65,9 @@ class Sanji(object):
         self.init()
 
     def init(self):
+        """
+        This is for user implement
+        """
         pass
 
     def _mqtt_on_message(self, mqttc, obj, msg):
@@ -71,6 +77,7 @@ class Sanji(object):
         Retruns:
             None
         """
+
         print msg.topic+" "+str(msg.payload)
 
     def _mqtt_on_connect(self, mqttc, obj, flags, rc):
@@ -80,13 +87,13 @@ class Sanji(object):
 
     def _set_tunnel(self, tunnel):
         if self.tunnel != None:
-            self._mqtt.unsubscribe(str(elf.tunnel))
+            self._mqtt.unsubscribe(str(self.tunnel))
 
         self.tunnel = tunnel
         self._mqtt.subscribe(str(self.tunnel))
 
     def run(self):
-        self._mqtt.connect(getattr("ip"), getattr("port"), getattr("keepalive"))
+        self._mqtt.connect(getattr(self, "ip"), getattr(self, "port"), getattr(self, "keepalive"))
         self._mqtt.loop_forever()
 
     def exit(self, signal, frame):
