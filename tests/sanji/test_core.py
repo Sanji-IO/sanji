@@ -3,18 +3,15 @@ import sys
 import unittest
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../sanji')
-    import sanji
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
+    from sanji.core import Sanji
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
 
-import paho.mqtt.client as mqtt
-
-class Model(sanji.Sanji):
+class Model(Sanji):
     
     def init(self):
-        print "init"
         self.router.route("/model/:id") \
             .get(self.get) \
             .post(self.post)
@@ -27,6 +24,14 @@ class Model(sanji.Sanji):
 
 
 class TestSanjiClass(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        print "Ensure mosquitto broker is up."
+
+    @classmethod
+    def tearDownClass(cls):
+        print "Ensure mosquitto broker is down."
+
     def setUp(self):
         self.model = Model()
 
