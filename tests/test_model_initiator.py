@@ -19,11 +19,11 @@ class TestModelInitiatorClass(unittest.TestCase):
     """
 
     model_name = "test_myself"
-    model_path = "/samba/sanji-sdk/tests/test_myself"
-    model_db_folder = "/samba/sanji-sdk/tests/test_myself/data"
+    model_path = "/tmp/sanji-sdk/tests/test_myself"
+    model_db_folder = "/tmp/sanji-sdk/tests/test_myself/data"
     model_factory_db = \
-        "/samba/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
-    model_db = "/samba/sanji-sdk/tests/test_myself/data/test_myself.json"
+        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
+    model_db = "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json"
 
     def setUp(self):
         """
