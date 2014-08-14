@@ -1,6 +1,13 @@
 import unittest
-from sanji_message import SanjiMessage, SanjiMessageType
+import sys
+import os
 
+try:
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../src')
+    from sanji_message import SanjiMessage, SanjiMessageType
+except ImportError:
+    print "Please check the python PATH for import test module."
+    exit(1)
 
 class TestSanjiMessageClass(unittest.TestCase):
     def setUp(self):
