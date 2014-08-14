@@ -3,6 +3,7 @@
 
 import os
 import shutil
+import subprocess
 
 class ModelInitiator(object):
     """
@@ -25,8 +26,8 @@ class ModelInitiator(object):
         """
         try:
             if not os.path.exists(self.data_folder_path):
-                os.mkdir(self.data_folder_path)
-
+                cmd = "mkdir -p %s" % self.data_folder_path
+                subprocess.call(cmd, shell=True)
             return True
             
         except:

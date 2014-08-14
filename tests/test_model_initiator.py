@@ -1,5 +1,6 @@
 import unittest
 import sys
+import subprocess
 try:
     sys.path.append('../src')
     from model_initiator import ModelInitiator
@@ -16,17 +17,18 @@ class TestModelInitiatorClass(unittest.TestCase):
     """
 
     model_name = "test_myself"
-    model_path = "/samba/sanji-sdk/test/test_myself"
-    model_db_folder = "/samba/sanji-sdk/test/test_myself/data"
+    model_path = "/samba/sanji-sdk/tests/test_myself"
+    model_db_folder = "/samba/sanji-sdk/tests/test_myself/data"
     model_factory_db = \
-        "/samba/sanji-sdk/test/test_myself/data/test_myself.factory.json"
-    model_db = "/samba/sanji-sdk/test/test_myself/data/test_myself.json"
+        "/samba/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
+    model_db = "/samba/sanji-sdk/tests/test_myself/data/test_myself.json"
 
     def setUp(self):
         """
         " Prepare
         """
-        os.mkdir(self.model_path)
+        cmd = "mkdir -p %s" % self.model_path
+        subprocess.call(cmd, shell=True)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
 
 

@@ -41,6 +41,13 @@ class VersionDict(collections.MutableMapping):
         self.store = copy.deepcopy(dictionary)
 
 
+class SanjiJSON(VersionDict):
+    def __init__(self, file_path):
+        
+        pass
+
+
+
 
 if __name__ == "__main__":
     s = VersionDict()
