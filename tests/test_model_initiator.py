@@ -3,7 +3,7 @@ import sys
 import os
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../src')
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../sanji')
     from model_initiator import ModelInitiator
 except ImportError:
     print "Please check the python PATH for import test module."
