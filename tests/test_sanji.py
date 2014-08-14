@@ -3,7 +3,7 @@ import sys
 import unittest
 
 try:
-    sys.path.append('../src')
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../sanji')
     import sanji
 except ImportError:
     print "Please check the python PATH for import test module."
@@ -15,8 +15,8 @@ class Model(sanji.Sanji):
     
     def init(self):
         print "init"
-        self.router.route("/model/:id")
-            .get(self.get)
+        self.router.route("/model/:id") \
+            .get(self.get) \
             .post(self.post)
 
     def get(self, request, response):

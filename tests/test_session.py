@@ -4,7 +4,7 @@ import sys
 import unittest
 
 try:
-    sys.path.append('../src')
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../sanji')
     import session
 except ImportError:
     print "Please check the python PATH for import test module."
