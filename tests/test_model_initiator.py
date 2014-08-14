@@ -29,8 +29,9 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Prepare
         """
-        cmd = "mkdir -p %s" % self.model_path
-        subprocess.call(cmd, shell=True)
+        os.makedirs(self.model_path)
+        #cmd = "mkdir -p %s" % self.model_path
+        #subprocess.call(cmd, shell=True)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
 
 

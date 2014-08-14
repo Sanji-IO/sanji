@@ -26,8 +26,9 @@ class ModelInitiator(object):
         """
         try:
             if not os.path.exists(self.data_folder_path):
-                cmd = "mkdir -p %s" % self.data_folder_path
-                subprocess.call(cmd, shell=True)
+                os.makedirs(self.data_folder_path)
+                #cmd = "mkdir -p %s" % self.data_folder_path
+                #subprocess.call(cmd, shell=True)
             return True
             
         except:
