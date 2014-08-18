@@ -1,10 +1,14 @@
 import collections
 import copy
+import json
+import subprocess
+
 class VersionDict(collections.MutableMapping):
     """A dictionary that applies an arbitrary key-altering
        function before accessing the keys"""
 
     def __init__(self, *args, **kwargs):
+        print "VersionDict.__init__()"
         self.store = dict()
         self.update(dict(*args, **kwargs))  # use the free update to set keys
         self.private_head = "private"
@@ -37,19 +41,42 @@ class VersionDict(collections.MutableMapping):
     def get_private(self):
         return self.store[self.private_head]
 
+
     def deepcopy(self, dictionary):
         self.store = copy.deepcopy(dictionary)
 
 
 class SanjiConfig(VersionDict):
     def __init__(self, file_path):
+        super(SanjiConfig, self).__init__()
+        print "SanjiConfig.__init__()"
         
-        pass
+        self.file_path = file_path
+        self.load(self.file_path)
 
 
+        
+    def load(self, file_path=None):
+        if file_path == None:
+            file_path = self.file_path
+
+        with open(file_path, "r") as db_file:
+            self.store = json.load(db_file)
+
+
+    def save(self, file_path=None):
+        if file_path == None:
+            file_path = self.file_path        
+
+        with open(file_path, "w") as db_file:
+            json.dump(self.store, db_file, indent = 4)
+
+        cmd = "sync"
+        subprocess.call(cmd, shell=True)
 
 
 if __name__ == "__main__":
+    '''
     s = VersionDict()
     s['Test'] = 5
     s['Bat'] = "Yang"
@@ -70,3 +97,10 @@ if __name__ == "__main__":
     print private
     private["obj"]["name"] = "Matt"
     print cc
+    '''
+    print "-" * 80
+    
+    sanji_config = SanjiConfig("./model.json")
+
+    print sanji_config.store
+    

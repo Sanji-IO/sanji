@@ -3,7 +3,7 @@
 
 import os
 import shutil
-import subprocess
+
 
 class ModelInitiator(object):
     """
