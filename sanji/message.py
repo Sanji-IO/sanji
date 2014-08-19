@@ -1,6 +1,7 @@
 import urlparse
 import json
 import copy
+from random import randint
 
 def parse_querystring(querystring):
     """
@@ -19,7 +20,11 @@ def parse_querystring(querystring):
 
     return qs_dict
 
+
 def trim_resource(resource):
+    """
+    trim_resource
+    """
     return resource.strip(" \t\n\r/")
 
 
@@ -43,7 +48,7 @@ class SanjiMessageType(object):
         - [x] sign
         - [x] tunnel
 
-        Check is event message or not
+        Check is direct message or not
         - [v] id
         - [x] code
         - [v] method
@@ -111,9 +116,8 @@ class SanjiMessage(object):
                 if not isinstance(message, dict):
                     message = {}
             except Exception as e:
-                print "invaild message"
-                print message
-                message = {}
+                raise ValueError("Invaild SanjiMessage." + 
+                    "Must be a vaild JSON String")
         
         # put all prop into object
         for (prop, value) in message.iteritems():
@@ -121,6 +125,10 @@ class SanjiMessage(object):
 
         # put message type
         self._type = SanjiMessage.get_message_type(message)
+
+    def generate_id(self):
+        setattr(self, "id", randint(0, 100000))
+        return self.id
 
     def type(self):
         return self._type

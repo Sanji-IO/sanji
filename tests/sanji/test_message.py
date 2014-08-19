@@ -206,5 +206,12 @@ class TestSanjiMessageClass(unittest.TestCase):
         route.get(get)
         self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
 
+    def test_generate_id(self):
+        msg = SanjiMessage({})
+        msg_id = msg.generate_id()
+        self.assertEqual(msg.id, msg_id)
+        self.assertTrue(msg.id < 100000)
+        self.assertTrue(msg.id > 0)
+
 if __name__ == "__main__":
     unittest.main()
