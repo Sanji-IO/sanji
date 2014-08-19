@@ -133,14 +133,17 @@ class SanjiMessage(object):
     def type(self):
         return self._type
 
+    def to_json(self):
+        return json.dumps(self.__dict__)
+
     def match(self, route):
         """
         Match input route and return new SanjiMessage instance
         with parsed content
         """
-        self._resource = trim_resource(self.resource)
+        _resource = trim_resource(self.resource)
         self.method = self.method.lower()
-        resource_match = route.resource_regex.search(self._resource)
+        resource_match = route.resource_regex.search(_resource)
         if resource_match == None:
             return None
 

@@ -171,7 +171,6 @@ class TestSanjiMessageClass(unittest.TestCase):
         matched_msg = {
             "_type": 2,
             "resource": "/model/123?abc=123",
-            "_resource": "model/123?abc=123",
             "query": {"abc": "123"},
             "id": 123,
             "param": 
@@ -193,7 +192,6 @@ class TestSanjiMessageClass(unittest.TestCase):
         matched_msg = {
             "_type": 2,
             "resource": "/model/123",
-            "_resource": "model/123",
             "query": {},
             "id": 123,
             "param": 
