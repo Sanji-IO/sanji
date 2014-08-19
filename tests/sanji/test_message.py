@@ -4,10 +4,53 @@ import os
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    from message import SanjiMessage, SanjiMessageType
+    from message import SanjiMessage
+    from message import SanjiMessageType
+    from message import parse_querystring
+    from message import trim_resource
+    from router import Route
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
+
+class TestFunctions(unittest.TestCase):
+
+    def test_trim_resource(self):
+        uris = [
+            dict(uri="/api/v1/test", trimUri="api/v1/test"),
+            dict(uri="/api/v1/test/", trimUri="api/v1/test"),
+            dict(uri="////api/v1/test////", trimUri="api/v1/test"),
+            dict(uri="////api/v1/test", trimUri="api/v1/test"),
+            dict(uri="api/v1/test/", trimUri="api/v1/test"),
+            dict(uri="api/v1/test//////", trimUri="api/v1/test"),
+            dict(uri="test", trimUri="test"),
+            dict(uri="//test/", trimUri="test"),
+            dict(uri="/test", trimUri="test")
+        ]
+
+        for testcase in uris:
+            self.assertEqual(trim_resource(testcase["uri"]), testcase["trimUri"])
+
+    def test_parse_querystring(self):
+        self.assertEqual(
+            parse_querystring("abc=123&cde=456"),
+            {'abc': '123', 'cde': '456'}
+        )
+
+        self.assertEqual(
+            parse_querystring("abc=123&&&&cde=456"),
+            {'abc': '123', 'cde': '456'}
+        )
+
+        self.assertEqual(
+            parse_querystring("&&&&abc=123&&&&cde=456&&&&&async"),
+            {'abc': '123', 'cde': '456', 'async': True}
+        )
+
+        self.assertEqual(
+            parse_querystring("&&&&abc=123&&&&cde=456&&&&&async=false"),
+            {'abc': '123', 'cde': '456', 'async': 'false'}
+        )
 
 class TestSanjiMessageClass(unittest.TestCase):
     def setUp(self):
@@ -25,7 +68,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.REQUEST)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.REQUEST)
 
     def test_response_msg(self):
         msg = {
@@ -37,7 +80,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.RESPONSE)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.RESPONSE)
 
     def test_direct_msg(self):
         msg = {
@@ -49,7 +92,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.DIRECT)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.DIRECT)
 
     def test_event_msg(self):
         msg = {
@@ -60,7 +103,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.EVENT)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.EVENT)
 
     def test_hook_msg(self):
         msg = {
@@ -72,7 +115,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.HOOK)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.HOOK)
 
     def test_unknow_msg(self):
         msg = {
@@ -85,7 +128,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.UNKNOW)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
 
         msg = {
             "resource": "/network/cellular/1",
@@ -96,7 +139,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.UNKNOW)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
 
         msg = {
             "method": "get",
@@ -105,7 +148,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.UNKNOW)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
 
         msg = {
             "method": "get",
@@ -113,7 +156,55 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type, SanjiMessageType.UNKNOW)
+        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
+
+    def test_match(self):
+        def get(self):
+            pass
+
+        msg = {
+            "id": 123,
+            "method": "get",
+            "resource": "/model/123?abc=123"
+        }
+
+        matched_msg = {
+            "_type": 2,
+            "resource": "/model/123?abc=123",
+            "_resource": "model/123?abc=123",
+            "query": {"abc": "123"},
+            "id": 123,
+            "param": 
+                {"id": "123"},
+            "method": "get"
+        }
+
+        sanjimsg = SanjiMessage(msg)
+        route = Route("/model/:id")
+        route.get(get)
+        self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
+
+        msg = {
+            "id": 123,
+            "method": "get",
+            "resource": "/model/123"
+        }
+
+        matched_msg = {
+            "_type": 2,
+            "resource": "/model/123",
+            "_resource": "model/123",
+            "query": {},
+            "id": 123,
+            "param": 
+                {"id": "123"},
+            "method": "get"
+        }
+
+        sanjimsg = SanjiMessage(msg)
+        route = Route("/model/:id")
+        route.get(get)
+        self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
 
 if __name__ == "__main__":
     unittest.main()

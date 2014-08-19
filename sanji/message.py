@@ -1,3 +1,28 @@
+import urlparse
+import json
+import copy
+
+def parse_querystring(querystring):
+    """
+    Return parsed querystring in dict
+    """
+    if querystring == None or len(querystring) == 0:
+        return {}
+
+    qs_dict = urlparse.parse_qs(querystring, keep_blank_values=True)
+    for key in qs_dict:
+        if len(qs_dict[key]) != 1:
+            continue
+        qs_dict[key] = qs_dict[key][0]
+        if qs_dict[key] == '':
+            qs_dict[key] = True
+
+    return qs_dict
+
+def trim_resource(resource):
+    return resource.strip(" \t\n\r/")
+
+
 class SanjiMessageType(object):
     """
     Message Type Enum
@@ -43,7 +68,7 @@ class SanjiMessageType(object):
         - [x] tunnel
     """
 
-    UNKNOW = 0
+    UNKNOWN = 0
     RESPONSE = 1
     REQUEST = 2
     DIRECT = 3
@@ -74,15 +99,50 @@ class SanjiMessageType(object):
         }
     }
 
+
 class SanjiMessage(object):
     """
     SanjiMessage
     """
-
-
     def __init__(self, message):
-        self.data = message
-        self.type = SanjiMessage.get_message_type(message)
+        if not isinstance(message, dict):
+            try:
+                message = json.loads(message)
+                if not isinstance(message, dict):
+                    message = {}
+            except Exception as e:
+                print "invaild message"
+                print message
+                message = {}
+        
+        # put all prop into object
+        for (prop, value) in message.iteritems():
+            setattr(self, prop, value)
+
+        # put message type
+        self._type = SanjiMessage.get_message_type(message)
+
+    def type(self):
+        return self._type
+
+    def match(self, route):
+        """
+        Match input route and return new SanjiMessage instance
+        with parsed content
+        """
+        self._resource = trim_resource(self.resource)
+        self.method = self.method.lower()
+        resource_match = route.resource_regex.search(self._resource)
+        if resource_match == None:
+            return None
+
+        # build params and querystring
+        params = resource_match.groupdict()
+        querystring = params.pop("querystring", "")
+        setattr(self, "param", params)
+        setattr(self, "query", parse_querystring(querystring))
+
+        return copy.deepcopy(self)
 
     @staticmethod
     def get_message_type(message):
@@ -93,7 +153,7 @@ class SanjiMessage(object):
             if SanjiMessage.is_type(msg_type, message):
                 return msg_type
 
-        return SanjiMessageType.UNKNOW
+        return SanjiMessageType.UNKNOWN
 
     @staticmethod
     def is_type(msg_type, msg):
