@@ -18,7 +18,6 @@ class Route(object):
     Route class
     """
     def __init__(self, resource):
-
         # syntax: /network/cellular/:id
         self.resource = trim_resource(resource)
         self.resource_regex = compile_resource(resource)
@@ -28,8 +27,13 @@ class Route(object):
             self.__setattr__(method, self.create_handler_func(method))
 
     def create_handler_func(self, method):
-
+        """
+        create_handler_func
+        """
         def _handler(callback):
+            """
+            _handler
+            """
             # reentrant default is False [POST, DELETE, PUT]
             reentrant = False
             if method == "get":
@@ -45,6 +49,9 @@ class Route(object):
         return _handler
 
     def dispatch(self, message):
+        """
+        dispatch
+        """
         callbacks = []
         for handler in self.handlers:
             if handler["method"] != message.method:
@@ -64,31 +71,45 @@ class Router(object):
             self.__setattr__(method, self.create_route_func(method=method))
 
     def route(self, resource):
+        """
+        route
+        """
         route = self.routes.get(resource, Route(resource))
         self.routes.update({resource: route})
-        # self.routes.append(route)
-
         return route
 
     def create_route_func(self, method):
+        """
+        create_route_func
+        """
         def _route(resource, handler):
+            """
+            _route
+            """
             route = self.routes.get(resource, Route(resource))
             route.__getattribute__(method)(handler)
             self.routes.update({resource: route})
-            # self.routes.append(route)
             return self
 
         return _route
 
     def dispatch(self, message):
+        """
+        dispatch
+        """
         results = []
         # match routes
         for resource, route in self.routes.items():
             __message = message.match(route)
             if __message == None:
                 continue
+
+            route_result = route.dispatch(__message)
+            if len(route_result) == 0:
+                continue
+
             results.append({
-                "callbacks": route.dispatch(__message),
+                "callbacks": route_result,
                 "message": __message
             })
 
