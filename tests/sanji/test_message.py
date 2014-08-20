@@ -208,8 +208,26 @@ class TestSanjiMessageClass(unittest.TestCase):
         msg = SanjiMessage({})
         msg_id = msg.generate_id()
         self.assertEqual(msg.id, msg_id)
-        self.assertTrue(msg.id < 100000)
+        self.assertTrue(msg.id < 65535)
         self.assertTrue(msg.id > 0)
+
+    def test_init(self):
+        msg = SanjiMessage({
+            "method": "get",
+            "resource": "/model/123"
+        }, generate_id=True)
+
+        self.assertGreater(msg.id, 0)
+        self.assertLess(msg.id, 65535)
+        self.assertEqual(msg.type(), SanjiMessageType.REQUEST)
+
+        msg_noid = SanjiMessage({
+            "method": "get",
+            "resource": "/model/123"
+        })
+
+        self.assertEqual(msg_noid.type(), SanjiMessageType.UNKNOWN)
+
 
 if __name__ == "__main__":
     unittest.main()

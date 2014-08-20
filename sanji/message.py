@@ -109,7 +109,7 @@ class SanjiMessage(object):
     """
     SanjiMessage
     """
-    def __init__(self, message):
+    def __init__(self, message, generate_id=False):
         if not isinstance(message, dict):
             try:
                 message = json.loads(message)
@@ -123,11 +123,14 @@ class SanjiMessage(object):
         for (prop, value) in message.iteritems():
             setattr(self, prop, value)
 
+        if generate_id == True:
+            self.generate_id()
+
         # put message type
-        self._type = SanjiMessage.get_message_type(message)
+        self._type = SanjiMessage.get_message_type(self.__dict__)
 
     def generate_id(self):
-        setattr(self, "id", randint(0, 100000))
+        setattr(self, "id", randint(0, 65535))
         return self.id
 
     def type(self):
