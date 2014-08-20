@@ -228,6 +228,12 @@ class TestSanjiMessageClass(unittest.TestCase):
 
         self.assertEqual(msg_noid.type(), SanjiMessageType.UNKNOWN)
 
+    def test_to_dict(self):
+        pass
+
+    def test_to_json(self):
+        pass
+
 
 if __name__ == "__main__":
     unittest.main()

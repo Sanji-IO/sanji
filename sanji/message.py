@@ -136,8 +136,14 @@ class SanjiMessage(object):
     def type(self):
         return self._type
 
-    def to_json(self):
-        return json.dumps(self.__dict__)
+    def to_json(self, pretty=True):
+        data_dict = self.to_dict()
+        if pretty:
+            return json.dumps(data_dict, sort_keys=True, indent=2)
+        return json.dumps(data_dict, sort_keys=True)
+
+    def to_dict(self):
+        return {k: self.__dict__[k] for k in self.__dict__ if k.find("_") != 0}
 
     def match(self, route):
         """
