@@ -103,8 +103,8 @@ class Sanji(object):
                 continue
 
             for result in results:  # same route
-                for callback in result["callbacks"]:
-                    callback(self, result["message"])
+                map(result["callbacks"],
+                    lambda cb: cb(self, result["message"]))
 
         print "Thread is terminated"
 
@@ -159,7 +159,7 @@ class Sanji(object):
         on_connect(self, client, obj, flags, rc):
         """
         self._connection.set_tunnel(self._connection.tunnel)
-        print "Connected with result code "+str(rc)
+        print "Connected with result code " + str(rc)
         print "Listening on " + self._connection.tunnel
 
 
