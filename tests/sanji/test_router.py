@@ -170,7 +170,15 @@ class TestRouterClass(unittest.TestCase):
         result = self.router.dispatch(SanjiMessage(request))
         self.assertEqual("post_no_id", result[0]["callbacks"][0]())
 
+        request = {
+            "id": 698978,
+            "resource": "/test/resource/",
+            "method": "get",
+            "data": {}
+        }
 
+        result = self.router.dispatch(SanjiMessage(request))
+        self.assertEqual(0, len(result))
         # test dispatch threading
 
 if __name__ == "__main__":
