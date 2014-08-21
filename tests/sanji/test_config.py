@@ -7,7 +7,8 @@ import unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
-    from sanji.model_initiator import ModelInitiator
+    from sanji.config import VersionDict
+    from sanji.config import SanjiConfig
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
@@ -17,64 +18,103 @@ import os
 import shutil
 
 
-class TestModelInitiatorClass(unittest.TestCase):
+class TestVersionDictClass(unittest.TestCase):
     """
     " Test class
     """
-
-    model_name = "test_myself"
-    model_path = "/tmp/sanji-sdk/tests/test_myself"
-    model_db_folder = "/tmp/sanji-sdk/tests/test_myself/data"
-    model_factory_db = \
-        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
-    model_db = "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json"
 
     def setUp(self):
         """
         " Prepare
         """
-        os.makedirs(self.model_path)
-        self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
+        pass
 
     def tearDown(self):
         """
         " Clean up
         """
-        if os.path.exists(self.model_path):
-            shutil.rmtree(self.model_path)
-
-        self.model_initaitor = None
+        pass
 
     def test_init(self):
         """
         " Test __init__()
         """
-        self.assertEquals(self.model_initaitor.model_name, self.model_name)
+        pass
 
-    def test_mkdir(self):
+    def test_getitem(self):
         """
-        " It Should generate a data folder.
+        " test __getitem__()
         """
-        result = self.model_initaitor.mkdir()
-        self.assertTrue(result)
-        self.assertTrue(os.path.exists(self.model_db_folder))
+        pass
 
-    def test_create_db(self):
+    def test_setitem(self):
         """
-        " It should generate a factory db.
+        " test __setitem__()
         """
-        self.model_initaitor.mkdir()
-        try:
-            with open(self.model_factory_db, 'a'):
-                os.utime(self.model_factory_db, None)
-        except Exception:
-            self.fail("Maybe there is no folder to create file.")
+        pass
 
-        self.assertRaises(self.model_initaitor.create_db)
+    def test_delitem(self):
+        pass
 
-        result = self.model_initaitor.create_db()
-        self.assertTrue(result)
-        self.assertTrue(os.path.exists(self.model_db))
+    def test_iter(self):
+        pass
+
+    def test_len(self):
+        pass
+
+    def test_str(self):
+        pass
+
+    def test_repr(self):
+        pass
+
+    def test_construct_node(self):
+        pass
+
+    def test_add_private_node(self):
+        pass
+
+    def test_get_private(self):
+        pass
+
+    def test_deepcopy(self):
+        pass
+
+
+class TestSanjiConfigClass(unittest.TestCase):
+    """
+    " Test class
+    """
+
+    def setUp(self):
+        """
+        " Prepare
+        """
+        pass
+
+    def tearDown(self):
+        """
+        " Clean up
+        """
+        pass
+
+    def test_init(self):
+        """
+        " Test __init__()
+        """
+        pass
+
+    def test_load(self):
+        """
+        "
+        """
+        pass
+
+    def test_save(self):
+        """
+        "
+        """
+        pass
 
 
 if __name__ == "__main__":
