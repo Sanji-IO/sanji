@@ -7,7 +7,8 @@ try:
     import sanji.router as router
     from sanji.message import SanjiMessage
 except ImportError:
-    print "Please check the python PATH for import test module."
+    print "Please check the python PATH for import test module. (%s)" \
+        % __file__
     exit(1)
 
 

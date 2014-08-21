@@ -8,7 +8,8 @@ try:
     from sanji.connection.connection import Connection
 except ImportError as e:
     print e
-    print "Please check the python PATH for import test module."
+    print "Please check the python PATH for import test module. (%s)" \
+        % __file__
     exit(1)
 
 class ConnectionMockup(Connection):

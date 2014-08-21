@@ -11,7 +11,8 @@ try:
     from sanji.message import trim_resource
     from sanji.router import Route
 except ImportError:
-    print "Please check the python PATH for import test module."
+    print "Please check the python PATH for import test module. (%s)" \
+        % __file__
     exit(1)
 
 class TestFunctions(unittest.TestCase):

@@ -8,7 +8,8 @@ try:
     from sanji.publish import Publish
     from connection_mockup import ConnectionMockup
 except ImportError:
-    print "Please check the python PATH for import test module."
+    print "Please check the python PATH for import test module. (%s)" \
+        % __file__
     exit(1)
 
 
