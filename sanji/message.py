@@ -3,11 +3,12 @@ import json
 import copy
 from random import randint
 
+
 def parse_querystring(querystring):
     """
     Return parsed querystring in dict
     """
-    if querystring == None or len(querystring) == 0:
+    if querystring is None or len(querystring) == 0:
         return {}
 
     qs_dict = urlparse.parse_qs(querystring, keep_blank_values=True)
@@ -115,15 +116,15 @@ class SanjiMessage(object):
                 message = json.loads(message)
                 if not isinstance(message, dict):
                     message = {}
-            except Exception as e:
-                raise ValueError("Invaild SanjiMessage." + 
-                    "Must be a vaild JSON String")
-        
+            except Exception:
+                raise ValueError("Invaild SanjiMessage." +
+                                 "Must be a vaild JSON String")
+
         # put all prop into object
         for (prop, value) in message.iteritems():
             setattr(self, prop, value)
 
-        if generate_id == True:
+        if generate_id is True:
             self.generate_id()
 
         # put message type
@@ -159,7 +160,7 @@ class SanjiMessage(object):
         _resource = trim_resource(self.resource)
         self.method = self.method.lower()
         resource_match = route.resource_regex.search(_resource)
-        if resource_match == None:
+        if resource_match is None:
             return None
 
         # build params and querystring
@@ -187,10 +188,10 @@ class SanjiMessage(object):
         Return message's type is or not
         """
         for prop in SanjiMessageType.FIELDS[msg_type]["must"]:
-            if msg.get(prop, False) == False:
+            if msg.get(prop, False) is False:
                 return False
         for prop in SanjiMessageType.FIELDS[msg_type]["prohibit"]:
-            if msg.get(prop, False) != False:
+            if msg.get(prop, False) is not False:
                 return False
 
         return True
