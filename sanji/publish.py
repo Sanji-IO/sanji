@@ -5,6 +5,8 @@ from sanji.message import SanjiMessageType
 Publish message module
 """
 class Publish(object):
+
+    # pylint: 
     """
     Publish class
     """

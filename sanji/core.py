@@ -15,10 +15,8 @@ import sys
 from threading import Thread
 from threading import Event
 
-from sanji.connection.mqtt import MQTT
 from sanji.message import SanjiMessage
 from sanji.message import SanjiMessageType
-from sanji.model_initiator import ModelInitiator
 from sanji.router import Router
 
 
@@ -41,7 +39,8 @@ logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
 # create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - " +
+                              "%(levelname)s - %(message)s")
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -74,7 +73,7 @@ class Sanji(object):
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         self._register_routes(methods)
 
-        self.init() # custom init function
+        self.init()  # custom init function
 
     def _register_routes(self, methods):
         """
@@ -84,7 +83,7 @@ class Sanji(object):
         methods = [(n, v) for (n, v) in methods if v.__name__ == "wrapper"]
         methods = sorted(methods, key=lambda x: x[1]._order)
         for name, value in methods:
-            value() # execute setting route
+            value()  # execute setting route
 
         return methods
 
@@ -103,7 +102,7 @@ class Sanji(object):
                 print "no route found!"
                 continue
 
-            for result in results: # same route
+            for result in results:  # same route
                 for callback in result["callbacks"]:
                     callback(self, result["message"])
 
@@ -172,8 +171,9 @@ def Route(resource=None, methods=None):
         # Ordered by declare sequence
         # http://stackoverflow.com/questions/4459531/how-to-read-class-attributes-in-the-same-order-as-declared
         f_locals = sys._getframe(1).f_locals
-        _order = len([v for v in f_locals.itervalues() \
-                        if hasattr(v, '__call__') and v.__name__ == "wrapper"])
+        _order = len([v for v in f_locals.itervalues()
+                     if hasattr(v, '__call__') and v.__name__ == "wrapper"])
+
         def wrapper(self, *args, **kwargs):
             _methods = methods
             if isinstance(methods, str):
