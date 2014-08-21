@@ -1,3 +1,5 @@
+# pylint: disable=no-name-in-module
+
 import os
 import sys
 import json
@@ -14,6 +16,7 @@ except ImportError:
 
 
 class TestPublishClass(unittest.TestCase):
+
     def setUp(self):
         self.conn = ConnectionMockup()
         self.publish = Publish(self.conn)
@@ -47,12 +50,12 @@ class TestPublishClass(unittest.TestCase):
         self.publish.event("/test/event", {"type": "notify", "message": "hi"})
         # msg = self.conn.on_publish()
 
-
     def test_direct(self):
-        pass
+        self.publish.direct(None, None)
 
     def test_response(self):
-        pass
+        func = self.publish.response(None)
+        func()
 
 if __name__ == "__main__":
     unittest.main()
