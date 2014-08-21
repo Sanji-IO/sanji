@@ -15,6 +15,7 @@ except ImportError:
         % __file__
     exit(1)
 
+
 class TestFunctions(unittest.TestCase):
 
     def test_trim_resource(self):
@@ -31,7 +32,8 @@ class TestFunctions(unittest.TestCase):
         ]
 
         for testcase in uris:
-            self.assertEqual(trim_resource(testcase["uri"]), testcase["trimUri"])
+            self.assertEqual(trim_resource(testcase["uri"]),
+                             testcase["trimUri"])
 
     def test_parse_querystring(self):
         self.assertEqual(
@@ -53,6 +55,7 @@ class TestFunctions(unittest.TestCase):
             parse_querystring("&&&&abc=123&&&&cde=456&&&&&async=false"),
             {'abc': '123', 'cde': '456', 'async': 'false'}
         )
+
 
 class TestSanjiMessageClass(unittest.TestCase):
     def setUp(self):
@@ -175,8 +178,8 @@ class TestSanjiMessageClass(unittest.TestCase):
             "resource": "/model/123?abc=123",
             "query": {"abc": "123"},
             "id": 123,
-            "param": 
-                {"id": "123"},
+            "param":
+            {"id": "123"},
             "method": "get"
         }
 
@@ -196,8 +199,8 @@ class TestSanjiMessageClass(unittest.TestCase):
             "resource": "/model/123",
             "query": {},
             "id": 123,
-            "param": 
-                {"id": "123"},
+            "param":
+            {"id": "123"},
             "method": "get"
         }
 
