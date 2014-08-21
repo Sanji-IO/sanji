@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+from Queue import Queue
 import json
 import os
 import sys
-from threading import Lock
 from threading import Thread
+from threading import Event
 import time
 import unittest
 
@@ -14,7 +15,7 @@ try:
     from core import Sanji
     from core import Route
     from message import SanjiMessage
-    from connection.connection import Connection
+    from connection_mockup import ConnectionMockup
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
@@ -35,9 +36,6 @@ class TestModel(Sanji):
     @Route(resource="/model/test/:id", methods="put")
     def put(self, message):
         pass
-    @Route(resource="/model", methods="put")
-    def put2(self, message):
-        pass
     @Route(resource="/model/:id", methods=["get", "delete", "put"])
     def generic(self, message):
         pass
@@ -45,6 +43,9 @@ class TestModel(Sanji):
     def thisismyid(self, message):
         pass
     def a11111(self):
+        pass
+    @Route(resource="/model", methods="put")
+    def put2(self, message):
         pass
 
 
@@ -83,39 +84,61 @@ class TestSanjiClass(unittest.TestCase):
         pass
 
     def test__dispatch_message(self):
-        smsg = SanjiMessage({
-                "id": 1234,
-                "method": "put",
-                "resource": "/model",
-                "data": {
-                    "test": "OK"
-                }
-            })
-        results = self.test_model._dispatch_message(smsg)
-        self.assertEqual(1, len(results))
-        self.assertEqual(1, len(results[0]["callbacks"]))
+        queue = Queue()
+        this = self
+        # message1
+        message1 = SanjiMessage({
+            "id": 1234,
+            "method": "get",
+            "resource": "/test__dispatch_message",
+            "data": {
+                "test": "OK"
+            }
+        })
 
+        def create_mock_handler(index):
+            def _mock_handler(self, message):
+                queue.put(index)
 
-        smsg = SanjiMessage({
-                "id": 1234,
-                "method": "get",
-                "resource": "/model/3345678",
-                "data": {
-                    "test": "OK"
-                }
-            })
-        results = self.test_model._dispatch_message(smsg)
-        self.assertEqual(2, len(results))
-        self.assertEqual(1, len(results[0]["callbacks"]))
-        self.assertEqual(3345678, int(results[0]["message"].param["id"]))
-        self.assertEqual(3345678, int(results[1]["message"].param["thisismyid"]))
+            return _mock_handler
 
+        for _ in range(0, 10):
+            self.test_model.router.get("/test__dispatch_message", 
+                create_mock_handler(_))
 
-    def test__get_thread(self):
-        pass
+        # message2
+        message2 = SanjiMessage({
+            "id": 3456,
+            "method": "get",
+            "resource": "/test__dispatch_message/12345",
+            "data": {
+                "test": "OK"
+            }
+        })
 
-    def test__close_thread(self):
-        pass
+        def mock_handler_2(self, message):
+            this.assertEqual(12345, message.param["id"])
+
+        self.test_model.router.get("/test__dispatch_message/:id", mock_handler_2)
+
+        # put messages in in_data queue
+        self.test_model.in_data.put(message1)
+        self.test_model.in_data.put(message2)
+
+        # start dispatch messages
+        event = Event()
+        thread = Thread(target=self.test_model._dispatch_message, args=(event,))
+        thread.daemon = True
+        thread.start()
+        event.set()
+        thread.join()
+
+        # check dispatch sequence
+        current_index = -1
+        while queue.empty() == False:
+            index = queue.get()
+            self.assertLess(current_index, index)
+            current_index = index
 
     def test_register_routes(self):
         def func_maker(name, order):

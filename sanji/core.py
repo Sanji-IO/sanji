@@ -5,13 +5,15 @@
 This is s Sanji Onject
 """
 
+from Queue import Queue
+from Queue import Empty
 import inspect
 import logging
 import os
 import signal
 import sys
-from threading import Semaphore
 from threading import Thread
+from threading import Event
 
 from connection.mqtt import MQTT
 from message import SanjiMessage
@@ -56,10 +58,11 @@ class Sanji(object):
         # Router-related
         self.router = Router()
         self.thread_count = 10
-        self._thread_count = Semaphore(self.thread_count)
+        self.thread_list = []
 
-        # Connection Bus
+        # Message Bus
         self._connection = connection
+        self.in_data = Queue()
 
         # setup callbacks
         self._connection.on_connect(self.on_connect)
@@ -73,40 +76,6 @@ class Sanji(object):
 
         self.init() # custom init function
 
-    def _dispatch_message(self, message):
-        """
-        _dispatch_message
-        """
-        results = self.router.dispatch(message)
-        if len(results) == 0:
-            print "no route found!"
-            return
-
-        for result in results: # same route
-            for callback in result["callbacks"]:
-                callback(self, result["message"])
-
-        return results
-
-    def _get_thread(self):
-        """
-        _get_thread
-        """
-        self._thread_count.acquire()
-        return Thread
-
-    def _close_thread(self):
-        """
-        _close_thread
-        """
-        self._thread_count.release()
-
-    def _response_busy(self):
-        """
-        _response_busy
-        """
-        pass
-
     def _register_routes(self, methods):
         """
         _register_routes
@@ -119,10 +88,41 @@ class Sanji(object):
 
         return methods
 
+    def _dispatch_message(self, stop_event):
+        """
+        _dispatch_message
+        """
+        while not stop_event.is_set():
+            try:
+                message = self.in_data.get(timeout=1)
+            except Empty:
+                continue
+
+            results = self.router.dispatch(message)
+            if len(results) == 0:
+                print "no route found!"
+                continue
+
+            for result in results: # same route
+                for callback in result["callbacks"]:
+                    callback(self, result["message"])
+
+        print "Thread is terminated"
+
     def run(self):
         """
         run
         """
+        # create a thread pool
+        for _ in range(0, self.thread_count):
+            stop_event = Event()
+            thread = Thread(target=self._dispatch_message,
+                            name="thread-%s" % _, args=(stop_event))
+            thread.daemon = True
+            thread.start()
+            self.thread_list.append((thread, stop_event))
+
+        # start connection, this will block until stop()
         self._connection.connect()
 
     def stop(self, signal, frame):
@@ -130,6 +130,11 @@ class Sanji(object):
         exit
         """
         self._connection.disconnect()
+
+        # TODO: shutdown all threads
+        for thread, event in self.thread_list:
+            event.set()
+            thread.join()
         # sys.exit(0)
 
     def init(self):
@@ -148,8 +153,7 @@ class Sanji(object):
         message = SanjiMessage(msg.payload)
         if message.type() == SanjiMessageType.UNKNOWN:
             return
-
-        self._dispatch_message(message)
+        self.in_data.put(message)
 
     def on_connect(self, client, obj, flags, rc):
         """
