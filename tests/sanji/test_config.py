@@ -1,6 +1,7 @@
-import unittest
-import sys
 import os
+import sys
+import unittest
+
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -11,6 +12,7 @@ except ImportError:
 
 import os
 import shutil
+
 
 class TestModelInitiatorClass(unittest.TestCase):
     """
@@ -31,7 +33,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         os.makedirs(self.model_path)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
 
-
     def tearDown(self):
         """
         " Clean up
@@ -41,13 +42,11 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.model_initaitor = None
 
-
     def test_init(self):
         """
         " Test __init__()
         """
         self.assertEquals(self.model_initaitor.model_name, self.model_name)
-
 
     def test_mkdir(self):
         """
@@ -56,7 +55,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         result = self.model_initaitor.mkdir()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db_folder))
-
 
     def test_create_db(self):
         """

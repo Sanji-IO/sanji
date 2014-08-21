@@ -58,6 +58,7 @@ class VersionDict(collections.MutableMapping):
 
 
 class SanjiConfig(VersionDict):
+    """A dictionary that applies Sanji's format."""
     def __init__(self, file_path):
         super(SanjiConfig, self).__init__()
         print "SanjiConfig.__init__()"

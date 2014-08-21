@@ -14,11 +14,11 @@ class ModelInitiator(object):
         self.model_name = model_name
         self.model_path = model_path
         self.data_folder_path = self.model_path + "/data"
-        self.factory_json_db_path = self.model_path + "/data/" + self.model_name + \
-                                ".factory.json"
-        self.json_db_path = self.model_path + "/data/" + self.model_name + ".json"
+        self.factory_json_db_path = self.model_path + "/data/" + \
+            self.model_name + ".factory.json"
+        self.json_db_path = self.model_path + "/data/" + \
+            self.model_name + ".json"
         self.db_type = db_type
-        
 
     def mkdir(self):
         """
@@ -27,20 +27,20 @@ class ModelInitiator(object):
         try:
             if not os.path.exists(self.data_folder_path):
                 os.makedirs(self.data_folder_path)
-                
+
             return True
-            
+
         except:
             return False
-
 
     def create_db(self):
         """
         "   Create a db file for model.
         """
-        self.factory_json_db_path = self.model_path + "/data/" + self.model_name + \
-                                ".factory.json"
-        self.json_db_path = self.model_path + "/data/" + self.model_name + ".json"
+        self.factory_json_db_path = self.model_path + "/data/" + \
+            self.model_name + ".factory.json"
+        self.json_db_path = self.model_path + "/data/" + \
+            self.model_name + ".json"
 
         if self.db_type == "json":
             if not os.path.exists(self.json_db_path):
@@ -54,4 +54,3 @@ class ModelInitiator(object):
 
     def __del__(self):
         pass
-        
