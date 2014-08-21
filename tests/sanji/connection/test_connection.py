@@ -9,6 +9,7 @@ except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)
 
+
 class TestConnectionClass(unittest.TestCase):
 
     def test_init(self):
@@ -20,9 +21,11 @@ class TestConnectionClass(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             conn.set_tunnel(None)
         with self.assertRaises(NotImplementedError):
-            conn.on_connect(None)
+            conn.set_on_connect(None)
         with self.assertRaises(NotImplementedError):
-            conn.on_message(None)
+            conn.set_on_message(None)
+        with self.assertRaises(NotImplementedError):
+            conn.set_on_publish(None)
         with self.assertRaises(NotImplementedError):
             conn.publish(None)
 

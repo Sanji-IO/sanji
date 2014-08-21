@@ -15,8 +15,8 @@ class MQTT(Connection):
     """
     MQTT
     """
-    def __init__(self, broker_ip="127.0.0.1", broker_port=1883, \
-        broker_keepalive=60):
+    def __init__(self, broker_ip="127.0.0.1", broker_port=1883,
+                 broker_keepalive=60):
         # proerties
         self.tunnel = uuid.uuid4().hex
         self.broker_ip = broker_ip
@@ -32,8 +32,8 @@ class MQTT(Connection):
         """
         connect
         """
-        self.client.connect(self.broker_ip, self.broker_port, \
-                    self.broker_keepalive)
+        self.client.connect(self.broker_ip, self.broker_port,
+                            self.broker_keepalive)
         self.client.loop_forever()
 
     def disconnect(self):
@@ -46,26 +46,32 @@ class MQTT(Connection):
         """
         set_tunnel(self, tunnel):
         """
-        if self.tunnel != None:
+        if self.tunnel is not None:
             self.client.unsubscribe(str(self.tunnel))
 
         self.tunnel = tunnel
         self.client.subscribe(str(self.tunnel))
 
-    def on_connect(self, func):
+    def set_on_connect(self, func):
         """
-        on_connect
+        set_on_connect
         """
         self.client.on_connect = func
 
-    def on_message(self, func):
+    def set_on_message(self, func):
         """
-        on_message
+        set_on_message
         """
         self.client.on_message = func
 
-    def publish(self, message, msg_type=SanjiMessageType.REQUEST, \
-            topic="/controller", qos=2):
+    def set_on_publish(self, func):
+        """
+        set_on_publish
+        """
+        self.client.on_publish = func
+
+    def publish(self, message, msg_type=SanjiMessageType.REQUEST,
+                topic="/controller", qos=2):
         """
         publish
         """
@@ -77,7 +83,7 @@ class MQTT(Connection):
 
         message_id = None
         if msg_type == SanjiMessageType.REQUEST or \
-            msg_type == SanjiMessageType.DIRECT:
+           msg_type == SanjiMessageType.DIRECT:
             message_id = message.generate_id()
         else:
             message_id = message.id

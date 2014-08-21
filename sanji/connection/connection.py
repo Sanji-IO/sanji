@@ -2,6 +2,7 @@
 Connection Interface Module
 """
 
+
 class Connection(object):
     """
     Connection interface
@@ -24,15 +25,21 @@ class Connection(object):
         """
         raise NotImplementedError("Should have implemented this")
 
-    def on_connect(self, func):
+    def set_on_connect(self, func):
         """
-        on_connect
+        set_on_connect
         """
         raise NotImplementedError("Should have implemented this")
 
-    def on_message(self, func):
+    def set_on_message(self, func):
         """
-        on_message
+        set_on_message
+        """
+        raise NotImplementedError("Should have implemented this")
+
+    def set_on_publish(self, func):
+        """
+        set_on_publish
         """
         raise NotImplementedError("Should have implemented this")
 
