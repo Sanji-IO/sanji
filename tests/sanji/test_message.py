@@ -1,4 +1,5 @@
 import unittest
+import json
 import sys
 import os
 
@@ -229,10 +230,14 @@ class TestSanjiMessageClass(unittest.TestCase):
         self.assertEqual(msg_noid.type(), SanjiMessageType.UNKNOWN)
 
     def test_to_dict(self):
-        pass
+        msg = SanjiMessage({})
+        for prop in msg.to_dict():
+            self.assertNotEqual(prop.find("_"), 0)
 
     def test_to_json(self):
-        pass
+        msg = SanjiMessage({})
+        for prop in json.loads(msg.to_json()):
+            self.assertNotEqual(prop.find("_"), 0)
 
 
 if __name__ == "__main__":

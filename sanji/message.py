@@ -137,12 +137,18 @@ class SanjiMessage(object):
         return self._type
 
     def to_json(self, pretty=True):
+        """
+        to_json will call to_dict then dumps into json format
+        """
         data_dict = self.to_dict()
         if pretty:
             return json.dumps(data_dict, sort_keys=True, indent=2)
         return json.dumps(data_dict, sort_keys=True)
 
     def to_dict(self):
+        """
+        to_dict will clean all protected and private properties
+        """
         return {k: self.__dict__[k] for k in self.__dict__ if k.find("_") != 0}
 
     def match(self, route):
