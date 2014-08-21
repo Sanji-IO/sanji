@@ -1,12 +1,12 @@
-from sanji.message import SanjiMessage
-from sanji.message import SanjiMessageType
-
 """
 Publish message module
 """
+
+from sanji.message import SanjiMessage
+
+
 class Publish(object):
 
-    # pylint: 
     """
     Publish class
     """
@@ -19,7 +19,7 @@ class Publish(object):
         """
         create_crud_func
         """
-        def _crud(resource, data=None):
+        def _crud(resource, data=None, block=True):
             """
             _crud
             """
@@ -27,24 +27,51 @@ class Publish(object):
                 "resource": resource,
                 "method": method
             }
-            if data != None:
+            if data is not None:
                 payload["data"] = data
             message = SanjiMessage(payload, generate_id=True)
-            self._connection.publish(topic="/controller", qos=2,
-                payload=message.to_dict())
+            mid = self._connection.publish(topic="/controller",
+                                           qos=2,
+                                           payload=message.to_dict())
+            if block is False:
+                return mid
+            # TODO:
+            # add to session and wait(blocking) reply.
+            # return Reply data
+            return mid
         return _crud
 
     def event(self, resource, data):
         """
         event
         """
-        pass
+        payload = {
+            "resource": resource,
+            "method": "post",
+            "tunnel": self._connection.tunnel,
+            "data": data
+        }
+        message = SanjiMessage(payload, generate_id=True)
+        mid = self._connection.publish(topic="/controller", qos=2,
+                                       payload=message.to_dict())
+
+        return mid
 
     def direct(self, resource, data):
         """
         direct
         """
-        pass
+        payload = {
+            "resource": resource,
+            "method": "post",
+            "tunnel": self._connection.tunnel,
+            "data": data
+        }
+        message = SanjiMessage(payload, generate_id=True)
+        mid = self._connection.publish(topic="/controller", qos=2,
+                                       payload=message.to_dict())
+
+        return mid
 
     def response(self, orig_message):
         """

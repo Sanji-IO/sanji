@@ -1,5 +1,3 @@
-# pylint: disable=no-name-in-module
-
 import os
 import sys
 import json
@@ -26,29 +24,61 @@ class TestPublishClass(unittest.TestCase):
         self.publish = None
 
     def test_crud(self):
+        this = self
+        mids = []
+        this.index = 0
+
+        def on_publish(self, mid):
+            this.assertIn(mid, mids)
+
+        def on_message(self, message):
+            msg = json.loads(message)
+            if this.index == 0:
+                this.assertEqual("get", msg["payload"]["method"])
+            elif this.index == 1:
+                this.assertEqual("put", msg["payload"]["method"])
+                this.assertEqual({"test": "nice"}, msg["payload"]["data"])
+            elif this.index == 2:
+                this.assertEqual("post", msg["payload"]["method"])
+                this.assertEqual({"test": "good"}, msg["payload"]["data"])
+            elif this.index == 3:
+                this.assertEqual("delete", msg["payload"]["method"])
+                this.assertEqual({"test": "ok"}, msg["payload"]["data"])
+
+            this.index = this.index + 1
+            if this.index == 4:
+                this.conn.disconnect()
+
+        self.conn.set_on_message(on_message)
+        self.conn.set_on_publish(on_publish)
+
         # CRUD
-        self.publish.get("/test/resource")
-        msg = json.loads(self.conn.on_publish())
-        self.assertEqual("get", msg["payload"]["method"])
+        mids.append(this.publish.get("/test/resource", block=False))
+        mids.append(this.publish.put("/test/resource", {"test": "nice"}))
+        mids.append(this.publish.post("/test/resource", {"test": "good"}))
+        mids.append(this.publish.delete("/test/resource", {"test": "ok"}))
 
-        self.publish.put("/test/resource", {"test": "nice"})
-        msg = json.loads(self.conn.on_publish())
-        self.assertEqual("put", msg["payload"]["method"])
-        self.assertEqual({"test": "nice"}, msg["payload"]["data"])
-
-        self.publish.post("/test/resource", {"test": "good"})
-        msg = json.loads(self.conn.on_publish())
-        self.assertEqual("post", msg["payload"]["method"])
-        self.assertEqual({"test": "good"}, msg["payload"]["data"])
-
-        self.publish.delete("/test/resource", {"test": "ok"})
-        msg = json.loads(self.conn.on_publish())
-        self.assertEqual("delete", msg["payload"]["method"])
-        self.assertEqual({"test": "ok"}, msg["payload"]["data"])
+        self.conn.connect()
 
     def test_event(self):
-        self.publish.event("/test/event", {"type": "notify", "message": "hi"})
-        # msg = self.conn.on_publish()
+        this = self
+        sent_mid = None
+
+        def on_publish(self, mid):
+            this.assertEqual(sent_mid, mid)
+
+        def on_message(self, message):
+            msg = json.loads(message)
+            this.assertEqual("post", msg["payload"]["method"])
+            this.assertEqual({"type": "notify", "message": "hi"},
+                             msg["payload"]["data"])
+            this.conn.disconnect()
+
+        self.conn.set_on_publish(on_publish)
+        self.conn.set_on_message(on_message)
+        sent_mid = self.publish.event("/test/event",
+                                      {"type": "notify", "message": "hi"})
+        self.conn.connect()
 
     def test_direct(self):
         self.publish.direct(None, None)
