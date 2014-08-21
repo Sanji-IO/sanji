@@ -111,14 +111,16 @@ class SanjiMessage(object):
     SanjiMessage
     """
     def __init__(self, message, generate_id=False):
-        if not isinstance(message, dict):
+        if isinstance(message, str):
             try:
                 message = json.loads(message)
-                if not isinstance(message, dict):
-                    message = {}
             except Exception:
                 raise ValueError("Invaild SanjiMessage." +
                                  "Must be a vaild JSON String")
+        elif isinstance(message, dict):
+            message = message
+        else:
+            raise TypeError("Message must be JSON string or Dict")
 
         # put all prop into object
         for (prop, value) in message.iteritems():

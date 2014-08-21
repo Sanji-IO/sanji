@@ -230,8 +230,13 @@ class TestSanjiMessageClass(unittest.TestCase):
             "method": "get",
             "resource": "/model/123"
         })
-
         self.assertEqual(msg_noid.type(), SanjiMessageType.UNKNOWN)
+
+        with self.assertRaises(ValueError):
+            SanjiMessage("{")
+
+        with self.assertRaises(TypeError):
+            SanjiMessage(123)
 
     def test_to_dict(self):
         msg = SanjiMessage({})
