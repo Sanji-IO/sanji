@@ -4,12 +4,12 @@ import sys
 import os
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    from message import SanjiMessage
-    from message import SanjiMessageType
-    from message import parse_querystring
-    from message import trim_resource
-    from router import Route
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    from sanji.message import SanjiMessage
+    from sanji.message import SanjiMessageType
+    from sanji.message import parse_querystring
+    from sanji.message import trim_resource
+    from sanji.router import Route
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)

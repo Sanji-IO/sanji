@@ -4,9 +4,10 @@ import json
 from Queue import Queue
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    from connection.connection import Connection
-except ImportError:
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    from sanji.connection.connection import Connection
+except ImportError as e:
+    print e
     print "Please check the python PATH for import test module."
     exit(1)
 

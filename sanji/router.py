@@ -3,7 +3,7 @@ This is router class
 """
 
 import re
-from message import trim_resource
+from sanji.message import trim_resource
 
 def compile_resource(resource):
     """

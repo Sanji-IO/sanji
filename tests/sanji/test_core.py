@@ -5,18 +5,19 @@ from Queue import Queue
 import json
 import os
 import sys
-from threading import Thread
 from threading import Event
+from threading import Thread
 import time
 import unittest
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    from core import Sanji
-    from core import Route
-    from message import SanjiMessage
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    from sanji.core import Sanji
+    from sanji.core import Route
+    from sanji.message import SanjiMessage
     from connection_mockup import ConnectionMockup
-except ImportError:
+except ImportError as e:
+    print e
     print "Please check the python PATH for import test module."
     exit(1)
 
@@ -117,7 +118,7 @@ class TestSanjiClass(unittest.TestCase):
         })
 
         def mock_handler_2(self, message):
-            this.assertEqual(12345, message.param["id"])
+            this.assertEqual(12345, int(message.param["id"]))
 
         self.test_model.router.get("/test__dispatch_message/:id", mock_handler_2)
 

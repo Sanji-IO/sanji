@@ -15,11 +15,11 @@ import sys
 from threading import Thread
 from threading import Event
 
-from connection.mqtt import MQTT
-from message import SanjiMessage
-from message import SanjiMessageType
-from model_initiator import ModelInitiator
-from router import Router
+from sanji.connection.mqtt import MQTT
+from sanji.message import SanjiMessage
+from sanji.message import SanjiMessageType
+from sanji.model_initiator import ModelInitiator
+from sanji.router import Router
 
 
 """

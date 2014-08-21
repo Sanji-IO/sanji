@@ -1,5 +1,5 @@
-from message import SanjiMessage
-from message import SanjiMessageType
+from sanji.message import SanjiMessage
+from sanji.message import SanjiMessageType
 
 """
 Publish message module

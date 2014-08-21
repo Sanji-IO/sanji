@@ -4,8 +4,8 @@ import json
 import unittest
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    from publish import Publish
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    from sanji.publish import Publish
     from connection_mockup import ConnectionMockup
 except ImportError:
     print "Please check the python PATH for import test module."

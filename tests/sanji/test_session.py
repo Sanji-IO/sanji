@@ -1,3 +1,5 @@
+__test__ = False
+
 import os
 import sys
 import unittest

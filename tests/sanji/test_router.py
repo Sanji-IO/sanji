@@ -3,9 +3,9 @@ import sys
 import os
 
 try:
-    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../sanji')
-    import router
-    from message import SanjiMessage
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    import sanji.router as router
+    from sanji.message import SanjiMessage
 except ImportError:
     print "Please check the python PATH for import test module."
     exit(1)

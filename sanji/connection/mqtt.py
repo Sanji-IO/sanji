@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import os
+import sys
 import uuid
 import paho.mqtt.client as mqtt
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 from message import SanjiMessage
 from message import SanjiMessageType
 from connection import Connection
