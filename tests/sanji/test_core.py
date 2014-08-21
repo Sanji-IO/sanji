@@ -2,12 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 from Queue import Queue
-import json
 import os
 import sys
 from threading import Event
 from threading import Thread
-import time
 import unittest
 
 try:
@@ -23,28 +21,37 @@ except ImportError as e:
 
 
 class TestModel(Sanji):
+
     def a111112(self):
         pass
+
     @Route(resource="/model/test/:id", methods="get")
     def get(self, message):
         pass
+
     @Route(resource="/model/test/:id", methods="post")
     def post(self, message):
         pass
+
     @Route(resource="/model/test/:id", methods="delete")
     def delete(self, message):
         pass
+
     @Route(resource="/model/test/:id", methods="put")
     def put(self, message):
         pass
+
     @Route(resource="/model/:id", methods=["get", "delete", "put"])
     def generic(self, message):
         pass
+
     @Route(resource="/model/:thisismyid", methods=["get", "delete", "put"])
     def thisismyid(self, message):
         pass
+
     def a11111(self):
         pass
+
     @Route(resource="/model", methods="put")
     def put2(self, message):
         pass
@@ -104,8 +111,8 @@ class TestSanjiClass(unittest.TestCase):
             return _mock_handler
 
         for _ in range(0, 10):
-            self.test_model.router.get("/test__dispatch_message", 
-                create_mock_handler(_))
+            self.test_model.router.get("/test__dispatch_message",
+                                       create_mock_handler(_))
 
         # message2
         message2 = SanjiMessage({
@@ -120,7 +127,8 @@ class TestSanjiClass(unittest.TestCase):
         def mock_handler_2(self, message):
             this.assertEqual(12345, int(message.param["id"]))
 
-        self.test_model.router.get("/test__dispatch_message/:id", mock_handler_2)
+        self.test_model.router.get("/test__dispatch_message/:id",
+                                   mock_handler_2)
 
         # put messages in in_data queue
         self.test_model.in_data.put(message1)
@@ -128,7 +136,8 @@ class TestSanjiClass(unittest.TestCase):
 
         # start dispatch messages
         event = Event()
-        thread = Thread(target=self.test_model._dispatch_message, args=(event,))
+        thread = Thread(target=self.test_model._dispatch_message,
+                        args=(event,))
         thread.daemon = True
         thread.start()
         event.set()
@@ -136,7 +145,7 @@ class TestSanjiClass(unittest.TestCase):
 
         # check dispatch sequence
         current_index = -1
-        while queue.empty() == False:
+        while queue.empty() is False:
             index = queue.get()
             self.assertLess(current_index, index)
             current_index = index
@@ -158,7 +167,7 @@ class TestSanjiClass(unittest.TestCase):
         methods = self.test_model._register_routes(methods)
         previous = None
         for name, func in methods:
-            if previous == None:
+            if previous is None:
                 previous = func
             self.assertLessEqual(previous._order, func._order)
 

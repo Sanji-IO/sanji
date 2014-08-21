@@ -64,8 +64,8 @@ class Sanji(object):
         self.in_data = Queue()
 
         # setup callbacks
-        self._connection.on_connect(self.on_connect)
-        self._connection.on_message(self.on_message)
+        self._connection.set_on_connect(self.on_connect)
+        self._connection.set_on_message(self.on_message)
 
         signal.signal(signal.SIGINT, self.stop)
 
@@ -103,8 +103,8 @@ class Sanji(object):
                 continue
 
             for result in results:  # same route
-                map(result["callbacks"],
-                    lambda cb: cb(self, result["message"]))
+                map(lambda cb: cb(self, result["message"]),
+                    result["callbacks"])
 
         print "Thread is terminated"
 
