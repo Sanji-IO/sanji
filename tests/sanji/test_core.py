@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from Queue import Queue
+from Queue import Empty
 import os
 import sys
 from threading import Event
@@ -83,13 +84,41 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model = TestModel(connection=ConnectionMockup())
 
     def tearDown(self):
+        self.test_model.stop()
         self.test_model = None
 
     def test_on_message(self):
-        pass
+        # Normal message
+        class Message(object):
+            def __init__(self, payload):
+                self.topic = ""
+                self.qos = 2
+                self.payload = payload
 
-    def test_on_connect(self):
-        pass
+        message = Message({
+            "id": 1234,
+            "method": "get",
+            "resource": "/test__dispatch_message",
+            "data": {
+                "test": "OK"
+            }
+        })
+        smessage = SanjiMessage(message.payload)
+        self.test_model.on_message(None, None, message)
+        data = self.test_model.in_data.get()
+        self.assertEqual(data.to_dict(), smessage.to_dict())
+
+        # Non-JSON String message
+        message = Message(None)
+        self.test_model.on_message(None, None, message)
+        with self.assertRaises(Empty):
+            self.test_model.in_data.get(timeout=0.1)
+
+        # UNKNOW TYPE message
+        message = Message("{}")
+        self.test_model.on_message(None, None, message)
+        with self.assertRaises(Empty):
+            self.test_model.in_data.get(timeout=0.1)
 
     def test__dispatch_message(self):
         queue = Queue()
@@ -172,10 +201,8 @@ class TestSanjiClass(unittest.TestCase):
             self.assertLessEqual(previous._order, func._order)
 
     def test_run(self):
-        pass
+        self.test_model.run()
 
-    def test_stop(self):
-        pass
 
 if __name__ == "__main__":
     unittest.main()

@@ -27,6 +27,7 @@ class ConnectionMockup(Connection):
         self._publish_lock = Lock()
         self.on_publish = None
         self.on_message = None
+        self.on_connect = lambda client, userdata, flags, rc: 0
 
     def __onpublish(self):
         while self.disconnect_event.is_set() is False:
@@ -57,8 +58,10 @@ class ConnectionMockup(Connection):
         self.__t_onmessage.daemon = True
         self.__t_onmessage.start()
 
+        self.on_connect(self, None, None, 0)
+
         self.__t_onpublish.join(timeout=1)
-        self.__t_onmessage.join(timeout=1)
+        self.__t_onmessage.join(timeout=0)
 
         return 0
 
@@ -78,6 +81,9 @@ class ConnectionMockup(Connection):
 
     def set_on_publish(self, func):
         self.on_publish = func
+
+    def set_on_connection(self, func):
+        self.on_connect = func
 
     def publish(self, **kwargs):
         self.message_queue.put(json.dumps(kwargs))
