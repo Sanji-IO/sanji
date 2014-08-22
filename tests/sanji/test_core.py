@@ -105,20 +105,20 @@ class TestSanjiClass(unittest.TestCase):
         })
         smessage = SanjiMessage(message.payload)
         self.test_model.on_message(None, None, message)
-        data = self.test_model.in_data.get()
+        data = self.test_model.req_queue.get()
         self.assertEqual(data.to_dict(), smessage.to_dict())
 
         # Non-JSON String message
         message = Message(None)
         self.test_model.on_message(None, None, message)
         with self.assertRaises(Empty):
-            self.test_model.in_data.get(timeout=0.1)
+            self.test_model.req_queue.get(timeout=0.1)
 
         # UNKNOW TYPE message
         message = Message("{}")
         self.test_model.on_message(None, None, message)
         with self.assertRaises(Empty):
-            self.test_model.in_data.get(timeout=0.1)
+            self.test_model.req_queue.get(timeout=0.1)
 
     def test__dispatch_message(self):
         queue = Queue()
@@ -166,10 +166,10 @@ class TestSanjiClass(unittest.TestCase):
             "resource": "/not_found/12345"
         })
 
-        # put messages in in_data queue
-        self.test_model.in_data.put(message1)
-        self.test_model.in_data.put(message2)
-        self.test_model.in_data.put(message3)
+        # put messages in req_queue queue
+        self.test_model.req_queue.put(message1)
+        self.test_model.req_queue.put(message2)
+        self.test_model.req_queue.put(message3)
 
         # start dispatch messages
         event = Event()
@@ -178,7 +178,7 @@ class TestSanjiClass(unittest.TestCase):
         thread.daemon = True
         thread.start()
 
-        while self.test_model.in_data.empty() is False:
+        while self.test_model.req_queue.empty() is False:
             pass
 
         event.set()

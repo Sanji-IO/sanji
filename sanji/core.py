@@ -61,7 +61,8 @@ class Sanji(object):
 
         # Message Bus
         self._conn = connection
-        self.in_data = Queue()
+        self.req_queue = Queue()
+        self.res_queue = Queue()
 
         # Setup callbacks
         self._conn.set_on_connect(self.on_connect)
@@ -96,12 +97,11 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.in_data.get(timeout=1)
+                message = self.req_queue.get(timeout=1)
             except Empty:
                 continue
 
             results = self.router.dispatch(message)
-            print results
             if len(results) == 0:
                 print "no route found!"
                 continue
@@ -139,7 +139,6 @@ class Sanji(object):
             event.set()
         for thread, event in self.thread_list:
             thread.join()
-        # sys.exit(0)
 
     def init(self):
         """
@@ -167,7 +166,13 @@ class Sanji(object):
             print "Got an UNKNOWN message, don't dispatch"
             return
 
-        self.in_data.put(message)
+        if message.type() == SanjiMessageType.RESPONSE:
+            self.res_queue.put(message)
+
+        if message.type() == SanjiMessageType.REQUEST or \
+           message.type() == SanjiMessageType.DIRECT or \
+           message.type() == SanjiMessageType.EVENT:
+            self.req_queue.put(message)
 
     def on_connect(self, client, userdata, flags, rc):
         """
