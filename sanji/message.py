@@ -117,9 +117,8 @@ class SanjiMessage(object):
             except Exception:
                 raise ValueError("Invaild SanjiMessage." +
                                  "Must be a vaild JSON String")
-        elif isinstance(message, dict):
-            message = message
-        else:
+
+        if not isinstance(message, dict):
             raise TypeError("Message must be JSON string or Dict")
 
         # put all prop into object
