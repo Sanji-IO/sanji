@@ -11,7 +11,7 @@ class Publish(object):
     Publish class
     """
     def __init__(self, connection):
-        self._connection = connection
+        self._conn = connection
         for method in ["get", "post", "put", "delete"]:
             self.__setattr__(method, self.create_crud_func(method))
 
@@ -30,7 +30,7 @@ class Publish(object):
             if data is not None:
                 payload["data"] = data
             message = SanjiMessage(payload, generate_id=True)
-            mid = self._connection.publish(topic="/controller",
+            mid = self._conn.publish(topic="/controller",
                                            qos=2,
                                            payload=message.to_dict())
             if block is False:
@@ -48,11 +48,11 @@ class Publish(object):
         payload = {
             "resource": resource,
             "method": "post",
-            "tunnel": self._connection.tunnel,
+            "tunnel": self._conn.tunnel,
             "data": data
         }
         message = SanjiMessage(payload, generate_id=True)
-        mid = self._connection.publish(topic="/controller", qos=2,
+        mid = self._conn.publish(topic="/controller", qos=2,
                                        payload=message.to_dict())
 
         return mid
@@ -64,11 +64,11 @@ class Publish(object):
         payload = {
             "resource": resource,
             "method": "post",
-            "tunnel": self._connection.tunnel,
+            "tunnel": self._conn.tunnel,
             "data": data
         }
         message = SanjiMessage(payload, generate_id=True)
-        mid = self._connection.publish(topic="/controller", qos=2,
+        mid = self._conn.publish(topic="/controller", qos=2,
                                        payload=message.to_dict())
 
         return mid
