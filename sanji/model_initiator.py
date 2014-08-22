@@ -24,14 +24,11 @@ class ModelInitiator(object):
         """
         "   Make a data folder for model
         """
-        try:
-            if not os.path.exists(self.data_folder_path):
-                os.makedirs(self.data_folder_path)
 
-            return True
+        if not os.path.exists(self.data_folder_path):
+            os.makedirs(self.data_folder_path)
 
-        except:
-            return False
+        return True
 
     def create_db(self):
         """

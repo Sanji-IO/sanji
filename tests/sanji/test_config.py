@@ -203,6 +203,18 @@ class TestSanjiConfigClass(unittest.TestCase):
         self.assertEqual(self.sc.store["public"]["name"], "Taiwan First Group")
         self.assertEqual(self.sc.store["private"]["version"], 2014)
 
+        self.sc.store = {}
+        self.sc.load()
+        self.assertEqual(self.sc.store["public"]["A"], 5566)
+
+        empty_json = {}
+        with open(self.model_json, "w") as db_file:
+            json.dump(empty_json, db_file, indent=4)
+
+        self.sc.load(self.model_json)
+        self.assertEqual(self.sc.store["public"], {})
+        self.assertEqual(self.sc.store["private"], {"version": 0})
+
     def test_save(self):
         """
         "

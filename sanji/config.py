@@ -75,7 +75,7 @@ class SanjiConfig(VersionDict):
         try:
             self.store["private"] = raw_json["private"]
         except KeyError:
-            self.construct_node(self.private_head)
+            self.construct_node(self.private_head, self.add_private_node())
 
     def save(self, file_path=None):
         if file_path is None:
@@ -86,36 +86,3 @@ class SanjiConfig(VersionDict):
 
         cmd = "sync"
         subprocess.call(cmd, shell=True)
-
-
-
-if __name__ == "__main__":
-    '''
-    s = VersionDict()
-    s['Test'] = 5
-    s['Bat'] = "Yang"
-
-    print s
-
-    A = dict()
-    A['private'] = dict()
-    A['private']['version'] = 300
-    A['private']['obj'] = dict()
-    A['private']['obj']['name'] = "John"
-    A['public'] = dict()
-    A['public']['ip'] = "192.168.31.254"
-
-    cc = VersionDict()
-    cc.deepcopy(A)
-    private = cc.get_private()
-    print private
-    private["obj"]["name"] = "Matt"
-    print cc
-    '''
-    print "-" * 80
-    sanji_config = SanjiConfig("./model.json")
-    sanji_config.save()
-
-    print sanji_config
-
-    pass

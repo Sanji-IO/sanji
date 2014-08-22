@@ -65,12 +65,13 @@ class TestModelInitiatorClass(unittest.TestCase):
         except Exception:
             self.fail("Maybe there is no folder to create file.")
 
-        self.assertRaises(self.model_initaitor.create_db)
-
         result = self.model_initaitor.create_db()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db))
 
+        self.db_type = "sql"
+        result = self.model_initaitor.create_db()
+        self.assertFalse(result)
 
 if __name__ == "__main__":
     unittest.main()
