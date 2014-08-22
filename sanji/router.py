@@ -5,12 +5,13 @@ This is router class
 import re
 from sanji.message import trim_resource
 
+
 def compile_resource(resource):
     """
     Return compiled regex for resource matching
     """
     return re.compile("^" + trim_resource(re.sub(r":(\w+)", r"(?P<\1>\w+?)",
-        resource)) + r"(\?(?P<querystring>.*))?$")
+                      resource)) + r"(\?(?P<querystring>.*))?$")
 
 
 class Route(object):
@@ -22,7 +23,7 @@ class Route(object):
         self.resource = trim_resource(resource)
         self.resource_regex = compile_resource(resource)
         self.handlers = []
-        
+
         for method in ["get", "post", "put", "delete", "all"]:
             self.__setattr__(method, self.create_handler_func(method))
 
@@ -101,7 +102,7 @@ class Router(object):
         # match routes
         for resource, route in self.routes.items():
             __message = message.match(route)
-            if __message == None:
+            if __message is None:
                 continue
 
             route_result = route.dispatch(__message)
