@@ -9,9 +9,8 @@ class VersionDict(collections.MutableMapping):
        function before accessing the keys"""
 
     def __init__(self, *args, **kwargs):
-        print "VersionDict.__init__()"
         self.store = dict()
-        self.update(dict(*args, **kwargs))  # use the free update to set keys
+        #self.update(dict(*args, **kwargs))  # use the free update to set keys
         self.private_head = "private"
         self.public_head = "public"
 
@@ -53,16 +52,11 @@ class VersionDict(collections.MutableMapping):
     def get_private(self):
         return self.store[self.private_head]
 
-    def deepcopy(self, dictionary):
-        self.store = copy.deepcopy(dictionary)
-
 
 class SanjiConfig(VersionDict):
     """A dictionary that applies Sanji's format."""
     def __init__(self, file_path):
         super(SanjiConfig, self).__init__()
-        print "SanjiConfig.__init__()"
-
         self.file_path = file_path
         self.load(self.file_path)
 
@@ -94,6 +88,7 @@ class SanjiConfig(VersionDict):
         subprocess.call(cmd, shell=True)
 
 
+
 if __name__ == "__main__":
     '''
     s = VersionDict()
@@ -116,12 +111,11 @@ if __name__ == "__main__":
     print private
     private["obj"]["name"] = "Matt"
     print cc
-
+    '''
     print "-" * 80
     sanji_config = SanjiConfig("./model.json")
     sanji_config.save()
 
     print sanji_config
-    '''
 
     pass
