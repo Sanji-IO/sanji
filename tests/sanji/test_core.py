@@ -177,6 +177,10 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
+
+        while self.test_model.in_data.empty() is False:
+            pass
+
         event.set()
         thread.join()
 

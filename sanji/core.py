@@ -101,6 +101,7 @@ class Sanji(object):
                 continue
 
             results = self.router.dispatch(message)
+            print results
             if len(results) == 0:
                 print "no route found!"
                 continue
