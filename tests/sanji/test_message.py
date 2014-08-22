@@ -37,6 +37,16 @@ class TestFunctions(unittest.TestCase):
 
     def test_parse_querystring(self):
         self.assertEqual(
+            parse_querystring("="),
+            {}
+        )
+
+        self.assertEqual(
+            parse_querystring("abc=456&abc=789"),
+            {'abc': ['456', '789']}
+        )
+
+        self.assertEqual(
             parse_querystring("abc=123&cde=456"),
             {'abc': '123', 'cde': '456'}
         )
@@ -246,6 +256,8 @@ class TestSanjiMessageClass(unittest.TestCase):
     def test_to_json(self):
         msg = SanjiMessage({})
         for prop in json.loads(msg.to_json()):
+            self.assertNotEqual(prop.find("_"), 0)
+        for prop in json.loads(msg.to_json(pretty=False)):
             self.assertNotEqual(prop.find("_"), 0)
 
 

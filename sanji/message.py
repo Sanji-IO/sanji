@@ -19,7 +19,7 @@ def parse_querystring(querystring):
         if qs_dict[key] == '':
             qs_dict[key] = True
 
-    return qs_dict
+    return {key: qs_dict[key] for key in qs_dict if len(key) != 0}
 
 
 def trim_resource(resource):
