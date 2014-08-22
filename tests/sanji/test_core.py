@@ -159,9 +159,17 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.router.get("/test__dispatch_message/:id",
                                    mock_handler_2)
 
+        # message3 - Not Found
+        message3 = SanjiMessage({
+            "id": 3456,
+            "method": "get",
+            "resource": "/not_found/12345"
+        })
+
         # put messages in in_data queue
         self.test_model.in_data.put(message1)
         self.test_model.in_data.put(message2)
+        self.test_model.in_data.put(message3)
 
         # start dispatch messages
         event = Event()
