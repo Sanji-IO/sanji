@@ -31,8 +31,8 @@ class Publish(object):
                 payload["data"] = data
             message = SanjiMessage(payload, generate_id=True)
             mid = self._conn.publish(topic="/controller",
-                                           qos=2,
-                                           payload=message.to_dict())
+                                     qos=2,
+                                     payload=message.to_dict())
             if block is False:
                 return mid
             # TODO:
@@ -69,7 +69,7 @@ class Publish(object):
         }
         message = SanjiMessage(payload, generate_id=True)
         mid = self._conn.publish(topic="/controller", qos=2,
-                                       payload=message.to_dict())
+                                 payload=message.to_dict())
 
         return mid
 
