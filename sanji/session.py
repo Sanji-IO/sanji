@@ -46,14 +46,14 @@ class Session(object):
         self.stop_event.set()
         self.thread_aging.join()
 
-    def resolve(self, msg_id, data=None, status=Status.RESOLVED):
+    def resolve(self, msg_id, message=None, status=Status.RESOLVED):
         self.session_lock.acquire()
         session = self.session_list.pop(msg_id, None)
         if session is None:
             # TODO: Warning message, nothing can be resolved.
             logger.debug("Warning message, nothing can be resolved")
             return
-        session["resolve_message"] = data
+        session["resolve_message"] = message
         session["status"] = status
         session["is_resolve"].set()
         self.session_lock.release()
@@ -76,7 +76,7 @@ class Session(object):
             return None
         session = {
             "status": Status.CREATED,
-            "data": message,
+            "message": message,
             "age": age,
             "mid": mid,
             "created_at": time(),

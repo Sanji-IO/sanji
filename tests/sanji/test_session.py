@@ -37,7 +37,7 @@ class TestSessionClass(unittest.TestCase):
     def test_resolve(self):
         message1 = Message({}, generate_id=True)
         self.session.create(message1)
-        self.assertEqual(self.session.resolve(message1.id)["data"],
+        self.assertEqual(self.session.resolve(message1.id)["message"],
                          message1)
 
         # resolve unknow message
@@ -48,7 +48,7 @@ class TestSessionClass(unittest.TestCase):
         message1 = Message({}, generate_id=True)
         self.session.create(message1, mid=1)
         session = self.session.resolve_send(1)
-        self.assertEqual(session["data"], message1)
+        self.assertEqual(session["message"], message1)
         self.assertEqual(session["status"], Status.SENT)
         # not found
         self.assertEqual(self.session.resolve_send(1234), None)
@@ -59,7 +59,7 @@ class TestSessionClass(unittest.TestCase):
 
         # create session as normal
         self.session.create(message1)
-        self.assertEqual(self.session.session_list[message1.id]["data"],
+        self.assertEqual(self.session.session_list[message1.id]["message"],
                          message1)
         # id duplicate
         message2.id = message1.id

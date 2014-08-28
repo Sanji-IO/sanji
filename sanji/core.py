@@ -125,7 +125,7 @@ class Sanji(object):
                 message = self.res_queue.get(timeout=0.1)
             except Empty:
                 continue
-            session = self._session.resolve(message.id, message.data)
+            session = self._session.resolve(message.id, message)
             if session is None:
                 logger.debug("Unknow response. Not for me.")
         logger.debug("_resolve_responses thread is terminated")
