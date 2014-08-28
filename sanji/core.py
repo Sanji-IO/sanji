@@ -16,7 +16,7 @@ from threading import Event
 from threading import Thread
 
 from sanji.message import SanjiMessage
-from sanji.message import SanjiMessageType
+from sanji.message import MessageType
 from sanji.publish import Publish
 from sanji.router import Router
 from sanji.session import Session
@@ -186,17 +186,17 @@ class Sanji(object):
             print "Got an invaild json string"
             return
 
-        if message.type() == SanjiMessageType.UNKNOWN:
+        if message.type() == MessageType.UNKNOWN:
             print "Got an UNKNOWN message, don't dispatch"
             return
 
-        if message.type() == SanjiMessageType.RESPONSE:
+        if message.type() == MessageType.RESPONSE:
             self.res_queue.put(message)
 
-        if message.type() == SanjiMessageType.REQUEST or \
-           message.type() == SanjiMessageType.DIRECT or \
-           message.type() == SanjiMessageType.HOOK or \
-           message.type() == SanjiMessageType.EVENT:
+        if message.type() == MessageType.REQUEST or \
+           message.type() == MessageType.DIRECT or \
+           message.type() == MessageType.HOOK or \
+           message.type() == MessageType.EVENT:
             self.req_queue.put(message)
 
     def on_connect(self, client, userdata, flags, rc):

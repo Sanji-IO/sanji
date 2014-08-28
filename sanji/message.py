@@ -29,7 +29,7 @@ def trim_resource(resource):
     return resource.strip(" \t\n\r/")
 
 
-class SanjiMessageType(object):
+class MessageType(object):
     """
     Message Type Enum
 
@@ -177,21 +177,21 @@ class SanjiMessage(object):
         """
         Return message's type
         """
-        for msg_type in SanjiMessageType.FIELDS:
+        for msg_type in MessageType.FIELDS:
             if SanjiMessage.is_type(msg_type, message):
                 return msg_type
 
-        return SanjiMessageType.UNKNOWN
+        return MessageType.UNKNOWN
 
     @staticmethod
     def is_type(msg_type, msg):
         """
         Return message's type is or not
         """
-        for prop in SanjiMessageType.FIELDS[msg_type]["must"]:
+        for prop in MessageType.FIELDS[msg_type]["must"]:
             if msg.get(prop, False) is False:
                 return False
-        for prop in SanjiMessageType.FIELDS[msg_type]["prohibit"]:
+        for prop in MessageType.FIELDS[msg_type]["prohibit"]:
             if msg.get(prop, False) is not False:
                 return False
 

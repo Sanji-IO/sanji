@@ -6,7 +6,7 @@ import os
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.message import SanjiMessage
-    from sanji.message import SanjiMessageType
+    from sanji.message import MessageType
     from sanji.message import parse_querystring
     from sanji.message import trim_resource
     from sanji.router import Route
@@ -83,7 +83,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.REQUEST)
+        self.assertEqual(sanjimsg.type(), MessageType.REQUEST)
 
     def test_response_msg(self):
         msg = {
@@ -95,7 +95,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.RESPONSE)
+        self.assertEqual(sanjimsg.type(), MessageType.RESPONSE)
 
     def test_direct_msg(self):
         msg = {
@@ -107,7 +107,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.DIRECT)
+        self.assertEqual(sanjimsg.type(), MessageType.DIRECT)
 
     def test_event_msg(self):
         msg = {
@@ -118,7 +118,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.EVENT)
+        self.assertEqual(sanjimsg.type(), MessageType.EVENT)
 
     def test_hook_msg(self):
         msg = {
@@ -130,7 +130,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.HOOK)
+        self.assertEqual(sanjimsg.type(), MessageType.HOOK)
 
     def test_unknow_msg(self):
         msg = {
@@ -143,7 +143,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
+        self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
             "resource": "/network/cellular/1",
@@ -154,7 +154,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
+        self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
             "method": "get",
@@ -163,7 +163,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
+        self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
             "method": "get",
@@ -171,7 +171,7 @@ class TestSanjiMessageClass(unittest.TestCase):
         }
 
         sanjimsg = SanjiMessage(msg)
-        self.assertEqual(sanjimsg.type(), SanjiMessageType.UNKNOWN)
+        self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
     def test_match(self):
         def get(self):
@@ -234,13 +234,13 @@ class TestSanjiMessageClass(unittest.TestCase):
 
         self.assertGreater(msg.id, 0)
         self.assertLess(msg.id, 65535)
-        self.assertEqual(msg.type(), SanjiMessageType.REQUEST)
+        self.assertEqual(msg.type(), MessageType.REQUEST)
 
         msg_noid = SanjiMessage({
             "method": "get",
             "resource": "/model/123"
         })
-        self.assertEqual(msg_noid.type(), SanjiMessageType.UNKNOWN)
+        self.assertEqual(msg_noid.type(), MessageType.UNKNOWN)
 
         with self.assertRaises(ValueError):
             SanjiMessage("{")

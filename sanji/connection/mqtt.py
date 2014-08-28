@@ -7,7 +7,7 @@ import uuid
 import paho.mqtt.client as mqtt
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 from message import SanjiMessage
-from message import SanjiMessageType
+from message import MessageType
 from connection import Connection
 
 
@@ -70,7 +70,7 @@ class MQTT(Connection):
         """
         self.client.on_publish = func
 
-    def publish(self, message, msg_type=SanjiMessageType.REQUEST,
+    def publish(self, message, msg_type=MessageType.REQUEST,
                 topic="/controller", qos=2):
         """
         publish
@@ -78,12 +78,12 @@ class MQTT(Connection):
         if not isinstance(message, SanjiMessage):
             raise TypeError("message should be SanjiMessage instance")
 
-        if message.type() == SanjiMessageType.UNKNOWN:
-            raise ValueError("message should be vaild SanjiMessageType")
+        if message.type() == MessageType.UNKNOWN:
+            raise ValueError("message should be vaild MessageType")
 
         message_id = None
-        if msg_type == SanjiMessageType.REQUEST or \
-           msg_type == SanjiMessageType.DIRECT:
+        if msg_type == MessageType.REQUEST or \
+           msg_type == MessageType.DIRECT:
             message_id = message.generate_id()
         else:
             message_id = message.id
