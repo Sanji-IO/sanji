@@ -95,7 +95,8 @@ class TestSanjiClass(unittest.TestCase):
                 self.qos = 2
                 self.payload = payload
 
-        message = Message({
+        # Request
+        message1 = Message({
             "id": 1234,
             "method": "get",
             "resource": "/test__dispatch_message",
@@ -103,9 +104,24 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = SanjiMessage(message.payload)
-        self.test_model.on_message(None, None, message)
+        smessage = SanjiMessage(message1.payload)
+        self.test_model.on_message(None, None, message1)
         data = self.test_model.req_queue.get()
+        self.assertEqual(data.to_dict(), smessage.to_dict())
+
+        # Response
+        message2 = Message({
+            "id": 1234,
+            "code": 200,
+            "method": "get",
+            "resource": "/test__dispatch_message",
+            "data": {
+                "test": "OK"
+            }
+        })
+        smessage = SanjiMessage(message2.payload)
+        self.test_model.on_message(None, None, message2)
+        data = self.test_model.res_queue.get()
         self.assertEqual(data.to_dict(), smessage.to_dict())
 
         # Non-JSON String message
@@ -190,6 +206,30 @@ class TestSanjiClass(unittest.TestCase):
             index = queue.get()
             self.assertLess(current_index, index)
             current_index = index
+
+    def test__resolve_responses(self):
+        # prepare messages
+        msg = SanjiMessage({
+            "id": 3456,
+            "code": 200,
+            "method": "get",
+            "resource": "/not_found/12345",
+            "data": None
+        })
+        self.test_model.res_queue.put(msg)
+
+        # start dispatch messages
+        event = Event()
+        thread = Thread(target=self.test_model._resolve_responses,
+                        args=(event,))
+        thread.daemon = True
+        thread.start()
+
+        while self.test_model.res_queue.empty() is False:
+            pass
+
+        event.set()
+        thread.join()
 
     def test_register_routes(self):
         def func_maker(name, order):

@@ -18,6 +18,7 @@ from threading import Event
 from sanji.message import SanjiMessage
 from sanji.message import SanjiMessageType
 from sanji.router import Router
+from sanji.session import Session
 
 
 """
@@ -54,10 +55,15 @@ class Sanji(object):
         self.model_name = None
         self.model_path = None
 
-        # Router-related
+        # Router-related (Dispatch)
         self.router = Router()
-        self.thread_count = 10
-        self.thread_list = []
+        self.dispatch_thread_count = 5
+        self.dispatch_thread_list = []
+
+        # Response-related (Resolve)
+        self.session = Session()
+        self.resolve_thread_count = 1
+        self.resolve_thread_list = []
 
         # Message Bus
         self._conn = connection
@@ -97,7 +103,7 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.req_queue.get(timeout=1)
+                message = self.req_queue.get(timeout=0.5)
             except Empty:
                 continue
 
@@ -110,20 +116,34 @@ class Sanji(object):
                 map(lambda cb: cb(self, result["message"]),
                     result["callbacks"])
 
-        print "Thread is terminated"
+        print "_dispatch_message thread is terminated"
+
+    def _resolve_responses(self, stop_event):
+        """
+        _resolve_responses
+        """
+        while not stop_event.is_set():
+            try:
+                message = self.res_queue.get(timeout=0.1)
+            except Empty:
+                continue
+            session = self.session.resolve(message.id, message.data)
+            if session is None:
+                print "Unknow response. Not for me."
+        print "_resolve_responses thread is terminated"
 
     def run(self):
         """
         run
         """
         # create a thread pool
-        for _ in range(0, self.thread_count):
+        for _ in range(0, self.dispatch_thread_count):
             stop_event = Event()
             thread = Thread(target=self._dispatch_message,
                             name="thread-%s" % _, args=(stop_event,))
             thread.daemon = True
             thread.start()
-            self.thread_list.append((thread, stop_event))
+            self.dispatch_thread_list.append((thread, stop_event))
 
         # start connection, this will block until stop()
         self._conn.connect()
@@ -135,9 +155,9 @@ class Sanji(object):
         self._conn.disconnect()
 
         # TODO: shutdown all threads
-        for thread, event in self.thread_list:
+        for thread, event in self.dispatch_thread_list:
             event.set()
-        for thread, event in self.thread_list:
+        for thread, event in self.dispatch_thread_list:
             thread.join()
 
     def init(self):
@@ -171,6 +191,7 @@ class Sanji(object):
 
         if message.type() == SanjiMessageType.REQUEST or \
            message.type() == SanjiMessageType.DIRECT or \
+           message.type() == SanjiMessageType.HOOK or \
            message.type() == SanjiMessageType.EVENT:
             self.req_queue.put(message)
 

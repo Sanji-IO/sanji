@@ -1,94 +1,107 @@
-import threading
+from Queue import Queue
+from threading import Lock
+from threading import Thread
+from threading import Event
+from time import sleep
+from time import time
+
 
 class Status(object):
     """
-    " Status Code
+    Status of session
     """
-    READY = 0
-    RUNNING = 1
-    SUCCESS = 3
-    ERROR = 4
+    CREATED = 0
+    SENDING = 1
+    SENT = 2
+    RESOLVED = 3
+    TIMEOUT = 4
 
 
-class Event(object):
-    def __init__(self):
-        self.callbacks = list()
+class TimeoutError(Exception):
+    pass
 
-    def emit(self, data):
-        result = list()
-        map(lambda callback: result.append(callback(data)), self.callbacks)
-        
-        if len(result) == 1:
-            return result[0]
 
-        return result
-
-    def on(self, callback):
-        self.callbacks.append(callback)
+class StatusError(Exception):
+    pass
 
 
 class Session(object):
-
-    def __init__(self, age=60):
-        self.age = age
-        self.status = Status.READY
-        self.events = dict()
-
-    def emit(self, name, data):
-        event = self.events.get(name, None)
-        if event == None:
-            return
-        return event.emit(data)
-    
-    def on(self, name, callback):
-        event = self.events.get(name, Event())
-        event.on(callback)
-        self.events[name] = event
-
-    def setStatus(self, status):
-        self.status = status
-        self.emit(self.status, self.status)
-
-    def getStatus(self):
-        return self.status
-
-
-class Sessions(object):
-
+    """
+    Session
+    """
     def __init__(self):
-        self._sessionsLock = threading.Lock()
-        self._sessions = list()
+        self.session_list = {}
+        self.session_lock = Lock()
+        self.timeout_queue = Queue()
+        self.stop_event = Event()
+        self.thread_aging = Thread(target=self.aging)
+        self.thread_aging.daemon = True
+        self.thread_aging.start()
 
-    def aging(self, tick=1):
-        self._sessionsLock.acquire()
-        removeSessionIndex = []
-        timeoutCallbacks = []
-        for index, session in enmurate(self._sessions):
-            session.age = session.age - tick
-            if session.age > 0:
-                continue
+    def stop(self):
+        self.stop_event.set()
+        self.thread_aging.join()
 
-            if session.getStatus() == False:
-                session.setStatus(Status.ERROR)
-                timeoutCallbacks.append(
-                    Thread(session.done, kwargs={ error: "Session Timeout"}))
-            else:
-                pass
+    def resolve(self, msg_id, data=None, status=Status.RESOLVED):
+        self.session_lock.acquire()
+        session = self.session_list.pop(msg_id, None)
+        if session is None:
+            # TODO: Warning message, nothing can be resolved.
+            print "TODO: Warning message, nothing can be resolved"
+            return
+        session["resolve_message"] = data
+        session["status"] = status
+        session["is_resolve"].set()
+        self.session_lock.release()
+        return session
 
-            removeSessionIndex.append(index)
+    def resolve_send(self, mid_id):
+        self.session_lock.acquire()
+        for session in self.session_list.itervalues():
+            if session["mid"] == mid_id:
+                session["status"] = Status.SENT
+                self.session_lock.release()
+                return session
+        self.session_lock.release()
+        return None
 
-        # clean expired sessions
-        for index in removeSessionIndex:
-            del self._sessions[index]
+    def create(self, message, mid=None, age=60):
+        self.session_lock.acquire()
+        if self.session_list.get(message.id, None) is not None:
+            self.session_lock.release()
+            return None
+        session = {
+            "status": Status.CREATED,
+            "data": message,
+            "age": age,
+            "mid": mid,
+            "created_at": time(),
+            "is_resolve": Event()
+        }
+        self.session_list.update({
+            message.id: session
+        })
+        self.session_lock.release()
 
-        # executing timeout callbacks
-        map(lambda thread: thread.start(), threads)
-        map(lambda thread: thread.join(), threads)
+        return session
 
-        self._sessionsLock.release()
+    def aging(self):
+        while not self.stop_event.is_set():
+            self.session_lock.acquire()
+            for session_id in self.session_list:
+                session = self.session_list[session_id]
+                # TODO: use system time diff to decrease age
+                #       instead of just - 1 ?
+                session["age"] = session["age"] - 0.5
+                if session["age"] <= 0:
+                    session["status"] = Status.TIMEOUT
+                    session["is_resolve"].set()
+                    self.timeout_queue.put(session)
 
-
-    def add_session(self, session):
-        self._sessionsLock.acquire()
-        self._sessions.append(session)
-        self._sessionsLock.release()
+            # remove all timeout session
+            self.session_list = {k: self.session_list[k] for k
+                                 in self.session_list
+                                 if self.session_list[k]["status"]
+                                 != Status.TIMEOUT}
+            self.session_lock.release()
+            sleep(0.5)

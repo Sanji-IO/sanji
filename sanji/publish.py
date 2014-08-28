@@ -3,6 +3,9 @@ Publish message module
 """
 
 from sanji.message import SanjiMessage
+from sanji.session import Status
+from sanji.session import TimeoutError
+from sanji.session import StatusError
 
 
 class Publish(object):
@@ -10,35 +13,51 @@ class Publish(object):
     """
     Publish class
     """
-    def __init__(self, connection):
+    def __init__(self, connection, session):
         self._conn = connection
+        self._session = session
         for method in ["get", "post", "put", "delete"]:
             self.__setattr__(method, self.create_crud_func(method))
+
+    def _wait_response(self, session):
+        session["is_resolve"].wait()
+        if session["status"] == Status.TIMEOUT:
+            raise TimeoutError(session)
+        elif session["status"] == Status.RESOLVED:
+            return session["resolve_message"]
+        raise StatusError(session)
 
     def create_crud_func(self, method):
         """
         create_crud_func
         """
-        def _crud(resource, data=None, block=True):
+        def _crud(resource, data=None, block=True, timeout=60):
             """
             _crud
             """
-            payload = {
-                "resource": resource,
-                "method": method
-            }
-            if data is not None:
-                payload["data"] = data
-            message = SanjiMessage(payload, generate_id=True)
+            if isinstance(data, SanjiMessage):
+                message = data
+            else:
+                payload = {
+                    "resource": resource,
+                    "method": method
+                }
+                if data is not None:
+                    payload["data"] = data
+                message = SanjiMessage(payload, generate_id=True)
+
             mid = self._conn.publish(topic="/controller",
                                      qos=2,
                                      payload=message.to_dict())
+            session = self._session.create(message, mid=mid, age=timeout)
+            session["status"] = Status.SENDING
+
             if block is False:
                 return mid
             # TODO:
             # add to session and wait(blocking) reply.
             # return Reply data
-            return mid
+            return self._wait_response(session)
         return _crud
 
     def event(self, resource, data):
