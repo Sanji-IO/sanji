@@ -72,13 +72,6 @@ class TestRouteFunction(unittest.TestCase):
 
 
 class TestSanjiClass(unittest.TestCase):
-    # @classmethod
-    # def setUpClass(cls):
-    #     print "Mosquitto broker is up."
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     print "Mosquitto broker is down."
 
     def setUp(self):
         self.test_model = TestModel(connection=ConnectionMockup())

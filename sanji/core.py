@@ -211,6 +211,9 @@ class Sanji(object):
         print "Connected with result code " + str(rc)
         print "Listening on " + self._conn.tunnel
 
+    def register(self):
+        pass
+
 
 def Route(resource=None, methods=None):
     """
