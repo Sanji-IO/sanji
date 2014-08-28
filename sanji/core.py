@@ -5,18 +5,19 @@
 This is s Sanji Onject
 """
 
-from Queue import Queue
 from Queue import Empty
+from Queue import Queue
 import inspect
 import logging
 import os
 import signal
 import sys
-from threading import Thread
 from threading import Event
+from threading import Thread
 
 from sanji.message import SanjiMessage
 from sanji.message import SanjiMessageType
+from sanji.publish import Publish
 from sanji.router import Router
 from sanji.session import Session
 
@@ -61,7 +62,7 @@ class Sanji(object):
         self.dispatch_thread_list = []
 
         # Response-related (Resolve)
-        self.session = Session()
+        self._session = Session()
         self.resolve_thread_count = 1
         self.resolve_thread_list = []
 
@@ -74,6 +75,9 @@ class Sanji(object):
         self._conn.set_on_connect(self.on_connect)
         self._conn.set_on_message(self.on_message)
         self._conn.set_on_connect(self.on_connect)
+
+        # Publisher
+        self.publish = Publish(self._conn, self._session)
 
         # Register signal to call stop()
         signal.signal(signal.SIGINT, self.stop)
@@ -127,7 +131,7 @@ class Sanji(object):
                 message = self.res_queue.get(timeout=0.1)
             except Empty:
                 continue
-            session = self.session.resolve(message.id, message.data)
+            session = self._session.resolve(message.id, message.data)
             if session is None:
                 print "Unknow response. Not for me."
         print "_resolve_responses thread is terminated"

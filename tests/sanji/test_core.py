@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-from Queue import Queue
 from Queue import Empty
+from Queue import Queue
 import os
 import sys
 from threading import Event
 from threading import Thread
 import unittest
+
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
