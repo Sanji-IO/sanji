@@ -83,14 +83,14 @@ class TestSanjiClass(unittest.TestCase):
 
     def test_on_message(self):
         # Normal message
-        class Message(object):
+        class MyMessage(object):
             def __init__(self, payload):
                 self.topic = ""
                 self.qos = 2
                 self.payload = payload
 
         # Request
-        message1 = Message({
+        message = MyMessage({
             "id": 1234,
             "method": "get",
             "resource": "/test__dispatch_message",
@@ -98,13 +98,13 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = Message(message1.payload)
-        self.test_model.on_message(None, None, message1)
+        smessage = Message(message.payload)
+        self.test_model.on_message(None, None, message)
         data = self.test_model.req_queue.get()
         self.assertEqual(data.to_dict(), smessage.to_dict())
 
         # Response
-        message2 = Message({
+        message2 = MyMessage({
             "id": 1234,
             "code": 200,
             "method": "get",
@@ -119,13 +119,13 @@ class TestSanjiClass(unittest.TestCase):
         self.assertEqual(data.to_dict(), smessage.to_dict())
 
         # Non-JSON String message
-        message = Message(None)
+        message = MyMessage(None)
         self.test_model.on_message(None, None, message)
         with self.assertRaises(Empty):
             self.test_model.req_queue.get(timeout=0.1)
 
         # UNKNOW TYPE message
-        message = Message("{}")
+        message = MyMessage("{}")
         self.test_model.on_message(None, None, message)
         with self.assertRaises(Empty):
             self.test_model.req_queue.get(timeout=0.1)
