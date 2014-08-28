@@ -5,7 +5,7 @@ import os
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
-    from sanji.message import SanjiMessage
+    from sanji.message import Message
     from sanji.message import MessageType
     from sanji.message import parse_querystring
     from sanji.message import trim_resource
@@ -67,7 +67,7 @@ class TestFunctions(unittest.TestCase):
         )
 
 
-class TestSanjiMessageClass(unittest.TestCase):
+class TestMessageClass(unittest.TestCase):
     def setUp(self):
         pass
 
@@ -82,7 +82,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.REQUEST)
 
     def test_response_msg(self):
@@ -94,7 +94,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.RESPONSE)
 
     def test_direct_msg(self):
@@ -106,7 +106,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.DIRECT)
 
     def test_event_msg(self):
@@ -117,7 +117,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.EVENT)
 
     def test_hook_msg(self):
@@ -129,7 +129,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.HOOK)
 
     def test_unknow_msg(self):
@@ -142,7 +142,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
@@ -153,7 +153,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "data": {}
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
@@ -162,7 +162,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "tunnel": "123",
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
         msg = {
@@ -170,7 +170,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "sign": ["abc", "def"],
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         self.assertEqual(sanjimsg.type(), MessageType.UNKNOWN)
 
     def test_match(self):
@@ -193,7 +193,7 @@ class TestSanjiMessageClass(unittest.TestCase):
             "method": "get"
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         route = Route("/model/:id")
         route.get(get)
         self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
@@ -214,20 +214,20 @@ class TestSanjiMessageClass(unittest.TestCase):
             "method": "get"
         }
 
-        sanjimsg = SanjiMessage(msg)
+        sanjimsg = Message(msg)
         route = Route("/model/:id")
         route.get(get)
         self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
 
     def test_generate_id(self):
-        msg = SanjiMessage({})
+        msg = Message({})
         msg_id = msg.generate_id()
         self.assertEqual(msg.id, msg_id)
         self.assertTrue(msg.id < 65535)
         self.assertTrue(msg.id > 0)
 
     def test_init(self):
-        msg = SanjiMessage({
+        msg = Message({
             "method": "get",
             "resource": "/model/123"
         }, generate_id=True)
@@ -236,25 +236,25 @@ class TestSanjiMessageClass(unittest.TestCase):
         self.assertLess(msg.id, 65535)
         self.assertEqual(msg.type(), MessageType.REQUEST)
 
-        msg_noid = SanjiMessage({
+        msg_noid = Message({
             "method": "get",
             "resource": "/model/123"
         })
         self.assertEqual(msg_noid.type(), MessageType.UNKNOWN)
 
         with self.assertRaises(ValueError):
-            SanjiMessage("{")
+            Message("{")
 
         with self.assertRaises(TypeError):
-            SanjiMessage(123)
+            Message(123)
 
     def test_to_dict(self):
-        msg = SanjiMessage({})
+        msg = Message({})
         for prop in msg.to_dict():
             self.assertNotEqual(prop.find("_"), 0)
 
     def test_to_json(self):
-        msg = SanjiMessage({})
+        msg = Message({})
         for prop in json.loads(msg.to_json()):
             self.assertNotEqual(prop.find("_"), 0)
         for prop in json.loads(msg.to_json(pretty=False)):

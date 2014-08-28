@@ -2,7 +2,7 @@
 Publish message module
 """
 
-from sanji.message import SanjiMessage
+from sanji.message import Message
 from sanji.session import Status
 from sanji.session import TimeoutError
 from sanji.session import StatusError
@@ -35,7 +35,7 @@ class Publish(object):
             """
             _crud
             """
-            if isinstance(data, SanjiMessage):
+            if isinstance(data, Message):
                 message = data
             else:
                 payload = {
@@ -44,7 +44,7 @@ class Publish(object):
                 }
                 if data is not None:
                     payload["data"] = data
-                message = SanjiMessage(payload, generate_id=True)
+                message = Message(payload, generate_id=True)
 
             mid = self._conn.publish(topic="/controller",
                                      qos=2,
@@ -70,7 +70,7 @@ class Publish(object):
             "tunnel": self._conn.tunnel,
             "data": data
         }
-        message = SanjiMessage(payload, generate_id=True)
+        message = Message(payload, generate_id=True)
         mid = self._conn.publish(topic="/controller", qos=2,
                                        payload=message.to_dict())
 
@@ -86,7 +86,7 @@ class Publish(object):
             "tunnel": self._conn.tunnel,
             "data": data
         }
-        message = SanjiMessage(payload, generate_id=True)
+        message = Message(payload, generate_id=True)
         mid = self._conn.publish(topic="/controller", qos=2,
                                  payload=message.to_dict())
 

@@ -14,7 +14,7 @@ try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.core import Sanji
     from sanji.core import Route
-    from sanji.message import SanjiMessage
+    from sanji.message import Message
     from connection_mockup import ConnectionMockup
 except ImportError as e:
     print e
@@ -98,7 +98,7 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = SanjiMessage(message1.payload)
+        smessage = Message(message1.payload)
         self.test_model.on_message(None, None, message1)
         data = self.test_model.req_queue.get()
         self.assertEqual(data.to_dict(), smessage.to_dict())
@@ -113,7 +113,7 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = SanjiMessage(message2.payload)
+        smessage = Message(message2.payload)
         self.test_model.on_message(None, None, message2)
         data = self.test_model.res_queue.get()
         self.assertEqual(data.to_dict(), smessage.to_dict())
@@ -134,7 +134,7 @@ class TestSanjiClass(unittest.TestCase):
         queue = Queue()
         this = self
         # message1
-        message1 = SanjiMessage({
+        message1 = Message({
             "id": 1234,
             "method": "get",
             "resource": "/test__dispatch_message",
@@ -154,7 +154,7 @@ class TestSanjiClass(unittest.TestCase):
                                        create_mock_handler(_))
 
         # message2
-        message2 = SanjiMessage({
+        message2 = Message({
             "id": 3456,
             "method": "get",
             "resource": "/test__dispatch_message/12345",
@@ -170,7 +170,7 @@ class TestSanjiClass(unittest.TestCase):
                                    mock_handler_2)
 
         # message3 - Not Found
-        message3 = SanjiMessage({
+        message3 = Message({
             "id": 3456,
             "method": "get",
             "resource": "/not_found/12345"
@@ -203,7 +203,7 @@ class TestSanjiClass(unittest.TestCase):
 
     def test__resolve_responses(self):
         # prepare messages
-        msg = SanjiMessage({
+        msg = Message({
             "id": 3456,
             "code": 200,
             "method": "get",

@@ -11,7 +11,7 @@ try:
     from sanji.session import Session
     from sanji.session import TimeoutError
     from sanji.session import StatusError
-    from sanji.message import SanjiMessage
+    from sanji.message import Message
     from connection_mockup import ConnectionMockup
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
@@ -89,7 +89,7 @@ class TestPublishClass(unittest.TestCase):
             with self.assertRaises(StatusError):
                 self.publish.put("/", message, timeout=10)
 
-        message = SanjiMessage({"test": "block"}, generate_id=True)
+        message = Message({"test": "block"}, generate_id=True)
         thread = Thread(target=send_block, args=(message, "block",))
         thread.daemon = True
         thread.start()
@@ -98,7 +98,7 @@ class TestPublishClass(unittest.TestCase):
         thread.join()
 
         # CRUD - block timeout
-        message = SanjiMessage({"test": "timeout"}, generate_id=True)
+        message = Message({"test": "timeout"}, generate_id=True)
         thread = Thread(target=send_timeout, args=(message, "timeout",))
         thread.daemon = True
         thread.start()
@@ -107,7 +107,7 @@ class TestPublishClass(unittest.TestCase):
         thread.join()
 
         # Resolve StatusError
-        message = SanjiMessage({"test": "StatusError"}, generate_id=True)
+        message = Message({"test": "StatusError"}, generate_id=True)
         thread = Thread(target=resolve_statuserror, args=(message,))
         thread.daemon = True
         thread.start()

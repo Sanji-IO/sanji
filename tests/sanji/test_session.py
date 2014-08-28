@@ -11,7 +11,7 @@ from threading import Thread
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.session import Session
-    from sanji.message import SanjiMessage
+    from sanji.message import Message
     from sanji.session import Status
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
@@ -35,7 +35,7 @@ class TestSessionClass(unittest.TestCase):
         self.assertIsInstance(self.session.thread_aging, Thread)
 
     def test_resolve(self):
-        message1 = SanjiMessage({}, generate_id=True)
+        message1 = Message({}, generate_id=True)
         self.session.create(message1)
         self.assertEqual(self.session.resolve(message1.id)["data"],
                          message1)
@@ -45,7 +45,7 @@ class TestSessionClass(unittest.TestCase):
 
     def test_resolve_send(self):
         # normal
-        message1 = SanjiMessage({}, generate_id=True)
+        message1 = Message({}, generate_id=True)
         self.session.create(message1, mid=1)
         session = self.session.resolve_send(1)
         self.assertEqual(session["data"], message1)
@@ -54,8 +54,8 @@ class TestSessionClass(unittest.TestCase):
         self.assertEqual(self.session.resolve_send(1234), None)
 
     def test_create(self):
-        message1 = SanjiMessage({}, generate_id=True)
-        message2 = SanjiMessage({}, generate_id=True)
+        message1 = Message({}, generate_id=True)
+        message2 = Message({}, generate_id=True)
 
         # create session as normal
         self.session.create(message1)
@@ -74,7 +74,7 @@ class TestSessionClass(unittest.TestCase):
         self.assertFalse(self.session.thread_aging.is_alive())
 
     def test_aging(self):
-        message1 = SanjiMessage({}, generate_id=True)
+        message1 = Message({}, generate_id=True)
         self.session.create(message1, age=0)
         sleep(1)
         self.assertFalse(self.session.timeout_queue.empty())

@@ -5,7 +5,7 @@ import os
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     import sanji.router as router
-    from sanji.message import SanjiMessage
+    from sanji.message import Message
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
@@ -25,8 +25,8 @@ class TestFunctions(unittest.TestCase):
             router.compile_resource('/abc/:id/').pattern
         )
 
-class TestRouteClass(unittest.TestCase):
 
+class TestRouteClass(unittest.TestCase):
 
     def setUp(self):
         self.route = router.Route('/test/resource/:id')
@@ -44,6 +44,7 @@ class TestRouteClass(unittest.TestCase):
 
         def callback1():
             print "I am test callback1"
+
         def callback2():
             print "I am test callback2"
 
@@ -63,6 +64,7 @@ class TestRouteClass(unittest.TestCase):
     def test_create_handler_func(self):
         func = self.route.create_handler_func("get")
         self.assertTrue(hasattr(func, "__call__"))
+
         def callback():
             print "test callback"
         func(callback)
@@ -82,7 +84,7 @@ class TestRouteClass(unittest.TestCase):
             print req
 
         self.route.get(callback)
-        message = SanjiMessage(request)
+        message = Message(request)
         self.assertEqual(len(self.route.dispatch(message)), 1)
 
 
@@ -103,6 +105,7 @@ class TestRouterClass(unittest.TestCase):
 
         def callback1():
             print "I am test callback1"
+
         def callback2():
             print "I am test callback2"
 
@@ -158,7 +161,7 @@ class TestRouterClass(unittest.TestCase):
         for method in ["get", "post", "delete", "put"]:
             request["method"] = method
             request_data["method"] = method
-            result = self.router.dispatch(SanjiMessage(request))
+            result = self.router.dispatch(Message(request))
             self.assertEqual(method, result[0]["callbacks"][0]())
 
         request = {
@@ -168,7 +171,7 @@ class TestRouterClass(unittest.TestCase):
             "data": {}
         }
 
-        result = self.router.dispatch(SanjiMessage(request))
+        result = self.router.dispatch(Message(request))
         self.assertEqual("post_no_id", result[0]["callbacks"][0]())
 
         request = {
@@ -178,7 +181,7 @@ class TestRouterClass(unittest.TestCase):
             "data": {}
         }
 
-        result = self.router.dispatch(SanjiMessage(request))
+        result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
         # test dispatch threading
 

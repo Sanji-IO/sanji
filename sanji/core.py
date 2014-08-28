@@ -15,7 +15,7 @@ import sys
 from threading import Event
 from threading import Thread
 
-from sanji.message import SanjiMessage
+from sanji.message import Message
 from sanji.message import MessageType
 from sanji.publish import Publish
 from sanji.router import Router
@@ -181,7 +181,7 @@ class Sanji(object):
             payload, qos, retain.
         """
         try:
-            message = SanjiMessage(msg.payload)
+            message = Message(msg.payload)
         except TypeError:
             print "Got an invaild json string"
             return

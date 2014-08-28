@@ -106,16 +106,16 @@ class MessageType(object):
     }
 
 
-class SanjiMessage(object):
+class Message(object):
     """
-    SanjiMessage
+    Message
     """
     def __init__(self, message, generate_id=False):
         if isinstance(message, str):
             try:
                 message = json.loads(message)
             except Exception:
-                raise ValueError("Invaild SanjiMessage." +
+                raise ValueError("Invaild Message." +
                                  "Must be a vaild JSON String")
 
         if not isinstance(message, dict):
@@ -129,7 +129,7 @@ class SanjiMessage(object):
             self.generate_id()
 
         # put message type
-        self._type = SanjiMessage.get_message_type(self.__dict__)
+        self._type = Message.get_message_type(self.__dict__)
 
     def generate_id(self):
         setattr(self, "id", randint(0, 65535))
@@ -155,7 +155,7 @@ class SanjiMessage(object):
 
     def match(self, route):
         """
-        Match input route and return new SanjiMessage instance
+        Match input route and return new Message instance
         with parsed content
         """
         _resource = trim_resource(self.resource)
@@ -178,7 +178,7 @@ class SanjiMessage(object):
         Return message's type
         """
         for msg_type in MessageType.FIELDS:
-            if SanjiMessage.is_type(msg_type, message):
+            if Message.is_type(msg_type, message):
                 return msg_type
 
         return MessageType.UNKNOWN
