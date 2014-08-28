@@ -36,15 +36,7 @@ Environment Variables
 BROKER_IP = os.getenv("BROKER_IP", "127.0.0.1")
 BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
-logger = logging.getLogger("Core")
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-# create formatter and add it to the handlers
-formatter = logging.Formatter("%(asctime)s - %(name)s - " +
-                              "%(levelname)s - %(message)s")
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+logger = logging.getLogger()
 
 
 class Sanji(object):
@@ -87,7 +79,9 @@ class Sanji(object):
         self._register_routes(methods)
 
         # Custom init function
+        logger.debug("Custom init start")
         self.init()
+        logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
         """
@@ -113,14 +107,14 @@ class Sanji(object):
 
             results = self.router.dispatch(message)
             if len(results) == 0:
-                print "no route found!"
+                logger.debug("No route be found.")
+                logger.debug(message.to_json())
                 continue
 
             for result in results:  # same route
                 map(lambda cb: cb(self, result["message"]),
                     result["callbacks"])
-
-        print "_dispatch_message thread is terminated"
+        logger.debug("_dispatch_message thread is terminated")
 
     def _resolve_responses(self, stop_event):
         """
@@ -133,8 +127,8 @@ class Sanji(object):
                 continue
             session = self._session.resolve(message.id, message.data)
             if session is None:
-                print "Unknow response. Not for me."
-        print "_resolve_responses thread is terminated"
+                logger.debug("Unknow response. Not for me.")
+        logger.debug("_resolve_responses thread is terminated")
 
     def run(self):
         """
@@ -148,7 +142,7 @@ class Sanji(object):
             thread.daemon = True
             thread.start()
             self.dispatch_thread_list.append((thread, stop_event))
-
+        logger.debug("Thread pool is created")
         # start connection, this will block until stop()
         self._conn.connect()
 
@@ -156,6 +150,7 @@ class Sanji(object):
         """
         exit
         """
+        logger.debug("Bundle is been shutting down")
         self._conn.disconnect()
 
         # TODO: shutdown all threads
@@ -183,11 +178,11 @@ class Sanji(object):
         try:
             message = Message(msg.payload)
         except TypeError:
-            print "Got an invaild json string"
+            logger.debug("Got an invaild json string")
             return
 
         if message.type() == MessageType.UNKNOWN:
-            print "Got an UNKNOWN message, don't dispatch"
+            logger.debug("Got an UNKNOWN message, don't dispatch")
             return
 
         if message.type() == MessageType.RESPONSE:
@@ -212,11 +207,10 @@ class Sanji(object):
             the connection result
         """
         self._conn.set_tunnel(self._conn.tunnel)
-        print "Connected with result code " + str(rc)
-        print "Listening on " + self._conn.tunnel
+        logger.debug("Connection established with result code %s" % rc)
 
     def register(self):
-        pass
+        self.publish.post("/controller/registration")
 
 
 def Route(resource=None, methods=None):

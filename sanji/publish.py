@@ -52,11 +52,10 @@ class Publish(object):
             session = self._session.create(message, mid=mid, age=timeout)
             session["status"] = Status.SENDING
 
+            # non-blocking, response mid immediately
             if block is False:
                 return mid
-            # TODO:
-            # add to session and wait(blocking) reply.
-            # return Reply data
+            # blocking, until we get response
             return self._wait_response(session)
         return _crud
 
@@ -72,7 +71,7 @@ class Publish(object):
         }
         message = Message(payload, generate_id=True)
         mid = self._conn.publish(topic="/controller", qos=2,
-                                       payload=message.to_dict())
+                                 payload=message.to_dict())
 
         return mid
 

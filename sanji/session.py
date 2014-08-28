@@ -1,9 +1,13 @@
 from Queue import Queue
+import logging
+from threading import Event
 from threading import Lock
 from threading import Thread
-from threading import Event
 from time import sleep
 from time import time
+
+
+logger = logging.getLogger()
 
 
 class Status(object):
@@ -47,7 +51,7 @@ class Session(object):
         session = self.session_list.pop(msg_id, None)
         if session is None:
             # TODO: Warning message, nothing can be resolved.
-            print "TODO: Warning message, nothing can be resolved"
+            logger.debug("Warning message, nothing can be resolved")
             return
         session["resolve_message"] = data
         session["status"] = status
@@ -94,6 +98,7 @@ class Session(object):
                 #       instead of just - 1 ?
                 session["age"] = session["age"] - 0.5
                 if session["age"] <= 0:
+                    logger.debug("Message timeout id:%s", session_id)
                     session["status"] = Status.TIMEOUT
                     session["is_resolve"].set()
                     self.timeout_queue.put(session)
