@@ -11,6 +11,7 @@ try:
     from sanji.session import Session
     from sanji.session import TimeoutError
     from sanji.session import StatusError
+    from sanji.session import Status
     from sanji.message import Message
     from connection_mockup import ConnectionMockup
 except ImportError:
@@ -37,42 +38,27 @@ class TestPublishClass(unittest.TestCase):
         mids = []
         this.index = 0
 
-        def on_publish(self, mid):
-            pass
-            # this.assertIn(mid, mids)
+        def send(method, resouce, data, block):
+            mids.append(this.publish.__getattribute__(method)
+                        (resouce, data, block=block))
 
-        def on_message(self, message):
-            msg = json.loads(message)
-            if this.index == 0:
-                this.assertEqual("get", msg["payload"]["method"])
-            elif this.index == 1:
-                this.assertEqual("put", msg["payload"]["method"])
-                this.assertEqual({"test": "nice"}, msg["payload"]["data"])
-            elif this.index == 2:
-                this.assertEqual("post", msg["payload"]["method"])
-                this.assertEqual({"test": "good"}, msg["payload"]["data"])
-            elif this.index == 3:
-                this.assertEqual("delete", msg["payload"]["method"])
-                this.assertEqual({"test": "ok"}, msg["payload"]["data"])
-
-            this.index = this.index + 1
-            if this.index == 4:
-                this.conn.disconnect()
-
-        self.conn.set_on_message(on_message)
-        self.conn.set_on_publish(on_publish)
-
-        # CRUD - non block
-        mids.append(this.publish.get("/test/resource", block=False))
-        mids.append(this.publish.put("/test/resource", {"test": "nice"},
-                    block=False))
-        mids.append(this.publish.post("/test/resource", {"test": "good"},
-                    block=False))
-        mids.append(this.publish.delete("/test/resource", {"test": "ok"},
-                    block=False))
-
-        # CRUD - non block fire
-        self.conn.connect()
+        threads = []
+        for method in ["get", "put", "post", "delete"]:
+            thread = Thread(target=send, args=(
+                method, "/test/resource", {"test": method}, False))
+            thread.daemon = True
+            thread.start()
+            threads.append(thread)
+        sleep(0.5)
+        for session in self.session.session_list.itervalues():
+            session["is_resolved"].set()
+            session["is_published"].set()
+            session["status"] = Status.SENT
+        print self.session.session_list
+        # map(threads, lambda t: t.join(1))
+        for thread in threads:
+            thread.join(1)
+            self.assertFalse(thread.is_alive())
 
         # CRUD - block
         def send_block(message, data):
@@ -95,7 +81,8 @@ class TestPublishClass(unittest.TestCase):
         thread.start()
         sleep(0.1)
         self.session.resolve(message.id, "block")
-        thread.join()
+        thread.join(1)
+        self.assertFalse(thread.is_alive())
 
         # CRUD - block timeout
         message = Message({"test": "timeout"}, generate_id=True)
@@ -104,7 +91,8 @@ class TestPublishClass(unittest.TestCase):
         thread.start()
         sleep(0.1)
         # self.session.resolve(message.id, 1)
-        thread.join()
+        thread.join(1)
+        self.assertFalse(thread.is_alive())
 
         # Resolve StatusError
         message = Message({"test": "StatusError"}, generate_id=True)
@@ -113,27 +101,50 @@ class TestPublishClass(unittest.TestCase):
         thread.start()
         sleep(0.1)
         self.session.resolve(message.id, 1, 123)
-        thread.join()
+        thread.join(1)
+        self.assertFalse(thread.is_alive())
 
     def test_event(self):
         this = self
-        sent_mid = None
 
-        def on_publish(self, mid):
-            this.assertEqual(sent_mid, mid)
+        # test non-block
+        def on_publish(sent_mid):
+            def _on_publish(self, mid):
+                this.assertEqual(sent_mid, mid)
+            return _on_publish
 
         def on_message(self, message):
             msg = json.loads(message)
-            this.assertEqual("post", msg["payload"]["method"])
-            this.assertEqual({"type": "notify", "message": "hi"},
-                             msg["payload"]["data"])
+            msg = Message(msg["payload"])
+            this.assertEqual("post", msg.method)
+            this.assertEqual({"type": "notify1", "message": "hi"},
+                             msg.data)
+            this.session.resolve(msg.id, msg)
             this.conn.disconnect()
 
-        self.conn.set_on_publish(on_publish)
+        session = self.publish.event("/test/event1",
+                                     {"type": "notify1", "message": "hi"},
+                                     block=False)
+        self.conn.set_on_publish(on_publish(session["mid"]))
         self.conn.set_on_message(on_message)
-        sent_mid = self.publish.event("/test/event",
-                                      {"type": "notify", "message": "hi"})
         self.conn.connect()
+
+        # test block
+
+        # Resolve StatusError
+        def send_block():
+            self.publish.event("/test/event2",
+                               {"type": "notify2", "message": "hi"})
+        thread = Thread(target=send_block, args=())
+        thread.daemon = True
+        thread.start()
+        sleep(0.5)
+
+        self.assertEqual(len(self.session.session_list), 1)
+        for session in self.session.session_list.itervalues():
+            self.session.resolve_send(session["mid"])
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
 
     def test_direct(self):
         self.publish.direct(None, None)
@@ -141,6 +152,67 @@ class TestPublishClass(unittest.TestCase):
     def test_response(self):
         func = self.publish.response(None)
         func()
+
+    def test__create_message(self):
+        # input dict
+        msg = self.publish._create_message({}, None)
+        self.assertIsInstance(msg, Message)
+        msg = self.publish._create_message(
+            {'method': 'get', 'sign': ['aaa', 'bbb']}, {'test': 1234}
+        )
+        self.assertEqual(msg.method, 'get')
+        self.assertEqual(msg.data['test'], 1234)
+        self.assertEqual(msg.sign, ['aaa', 'bbb'])
+
+        # input Messgae
+        in_msg = Message({'method': 'post', 'resource': '/test'})
+        out_msg = self.publish._create_message(data=in_msg)
+        self.assertDictEqual(in_msg.__dict__, out_msg.__dict__)
+
+    def test__wait_resolved(self):
+        # RESPONSE_TIMEOUT
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_resolved"].set()
+        session["status"] = Status.RESPONSE_TIMEOUT
+        with self.assertRaises(TimeoutError):
+            self.publish._wait_resolved(session)
+
+        # RESOLVED
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_resolved"].set()
+        session["status"] = Status.RESOLVED
+        session["resolve_message"] = True
+        self.assertTrue(self.publish._wait_resolved(session))
+
+        # UNKNOWN
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_resolved"].set()
+        session["status"] = 999
+        with self.assertRaises(StatusError):
+            self.publish._wait_resolved(session)
+
+    def test__wait_published(self):
+        # SEND_TIMEOUT
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_published"].set()
+        session["status"] = Status.SEND_TIMEOUT
+        with self.assertRaises(TimeoutError):
+            self.publish._wait_published(session)
+
+        # SENT
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_published"].set()
+        session["status"] = Status.SENT
+        self.assertDictEqual(self.publish._wait_published(session),
+                             session)
+
+        # UNKNOWN
+        session = self.session.create(Message({}, generate_id=True))
+        session["is_published"].set()
+        session["status"] = 999
+        with self.assertRaises(StatusError):
+            self.publish._wait_published(session)
+
 
 if __name__ == "__main__":
     unittest.main()

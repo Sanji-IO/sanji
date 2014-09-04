@@ -4,7 +4,7 @@ import os
 import sys
 import unittest
 from time import sleep
-from Queue import Queue
+from collections import deque
 from threading import Thread
 # from threading import Lock
 
@@ -31,7 +31,7 @@ class TestSessionClass(unittest.TestCase):
     def test_init(self):
         self.assertIsInstance(self.session.session_list, dict)
         # self.assertIsInstance(self.session.session_lock, Lock)
-        self.assertIsInstance(self.session.timeout_queue, Queue)
+        self.assertIsInstance(self.session.timeout_queue, deque)
         self.assertIsInstance(self.session.thread_aging, Thread)
 
     def test_resolve(self):
@@ -77,7 +77,7 @@ class TestSessionClass(unittest.TestCase):
         message1 = Message({}, generate_id=True)
         self.session.create(message1, age=0)
         sleep(1)
-        self.assertFalse(self.session.timeout_queue.empty())
+        self.assertEqual(len(self.session.timeout_queue), 1)
 
 
 if __name__ == "__main__":

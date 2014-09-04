@@ -1,4 +1,4 @@
-from Queue import Queue
+from collections import deque
 import logging
 from threading import Event
 from threading import Lock
@@ -18,7 +18,8 @@ class Status(object):
     SENDING = 1
     SENT = 2
     RESOLVED = 3
-    TIMEOUT = 4
+    SEND_TIMEOUT = 4
+    RESPONSE_TIMEOUT = 4
 
 
 class TimeoutError(Exception):
@@ -36,7 +37,7 @@ class Session(object):
     def __init__(self):
         self.session_list = {}
         self.session_lock = Lock()
-        self.timeout_queue = Queue()
+        self.timeout_queue = deque([], maxlen=10)
         self.stop_event = Event()
         self.thread_aging = Thread(target=self.aging)
         self.thread_aging.daemon = True
@@ -47,66 +48,71 @@ class Session(object):
         self.thread_aging.join()
 
     def resolve(self, msg_id, message=None, status=Status.RESOLVED):
-        self.session_lock.acquire()
-        session = self.session_list.pop(msg_id, None)
-        if session is None:
-            # TODO: Warning message, nothing can be resolved.
-            logger.debug("Warning message, nothing can be resolved")
-            return
-        session["resolve_message"] = message
-        session["status"] = status
-        session["is_resolve"].set()
-        self.session_lock.release()
-        return session
+        with self.session_lock:
+            session = self.session_list.pop(msg_id, None)
+            if session is None:
+                # TODO: Warning message, nothing can be resolved.
+                logger.debug("Warning message, nothing can be resolved")
+                return
+            session["resolve_message"] = message
+            session["status"] = status
+            session["is_resolved"].set()
+            return session
 
     def resolve_send(self, mid_id):
-        self.session_lock.acquire()
-        for session in self.session_list.itervalues():
-            if session["mid"] == mid_id:
-                session["status"] = Status.SENT
-                self.session_lock.release()
-                return session
-        self.session_lock.release()
-        return None
+        with self.session_lock:
+            for session in self.session_list.itervalues():
+                if session["mid"] == mid_id:
+                    session["status"] = Status.SENT
+                    session["is_published"].set()
+                    return session
+            return None
 
     def create(self, message, mid=None, age=60):
-        self.session_lock.acquire()
-        if self.session_list.get(message.id, None) is not None:
-            self.session_lock.release()
-            return None
-        session = {
-            "status": Status.CREATED,
-            "message": message,
-            "age": age,
-            "mid": mid,
-            "created_at": time(),
-            "is_resolve": Event()
-        }
-        self.session_list.update({
-            message.id: session
-        })
-        self.session_lock.release()
+        with self.session_lock:
+            if self.session_list.get(message.id, None) is not None:
+                return None
+            session = {
+                "status": Status.CREATED,
+                "message": message,
+                "age": age,
+                "mid": mid,
+                "created_at": time(),
+                "is_published": Event(),
+                "is_resolved": Event()
+            }
+            self.session_list.update({
+                message.id: session
+            })
 
-        return session
+            return session
 
     def aging(self):
         while not self.stop_event.is_set():
-            self.session_lock.acquire()
-            for session_id in self.session_list:
-                session = self.session_list[session_id]
-                # TODO: use system time diff to decrease age
-                #       instead of just - 1 ?
-                session["age"] = session["age"] - 0.5
-                if session["age"] <= 0:
-                    logger.debug("Message timeout id:%s", session_id)
-                    session["status"] = Status.TIMEOUT
-                    session["is_resolve"].set()
-                    self.timeout_queue.put(session)
+            with self.session_lock:
+                for session_id in self.session_list:
+                    session = self.session_list[session_id]
+                    # TODO: use system time diff to decrease age
+                    #       instead of just - 1 ?
+                    session["age"] = session["age"] - 0.5
+                    if session["age"] > 0:
+                        continue
 
-            # remove all timeout session
-            self.session_list = {k: self.session_list[k] for k
-                                 in self.session_list
-                                 if self.session_list[k]["status"]
-                                 != Status.TIMEOUT}
-            self.session_lock.release()
+                    logger.debug("Message timeout id:%s", session_id)
+                    if session["is_published"].is_set():
+                        session["status"] = Status.SEND_TIMEOUT
+                    else:
+                        session["status"] = Status.RESPONSE_TIMEOUT
+                    session["is_resolved"].set()
+                    session["is_published"].set()
+
+                    self.timeout_queue.append(session)
+
+                # remove all timeout session
+                self.session_list = {k: self.session_list[k] for k
+                                     in self.session_list
+                                     if self.session_list[k]["status"]
+                                     != Status.SEND_TIMEOUT
+                                     or self.session_list[k]["status"]
+                                     != Status.RESPONSE_TIMEOUT}
             sleep(0.5)

@@ -19,13 +19,31 @@ class Publish(object):
         for method in ["get", "post", "put", "delete"]:
             self.__setattr__(method, self.create_crud_func(method))
 
-    def _wait_response(self, session):
-        session["is_resolve"].wait()
-        if session["status"] == Status.TIMEOUT:
+    def _wait_resolved(self, session):
+        session["is_resolved"].wait()
+        if session["status"] == Status.RESPONSE_TIMEOUT:
             raise TimeoutError(session)
         elif session["status"] == Status.RESOLVED:
             return session["resolve_message"]
         raise StatusError(session)
+
+    def _wait_published(self, session):
+        session["is_published"].wait()
+        if session["status"] == Status.SEND_TIMEOUT:
+            raise TimeoutError(session)
+        elif session["status"] == Status.SENT:
+            return session
+        raise StatusError(session)
+
+    def _create_message(self, headers=None, data=None):
+        payload = headers
+        if isinstance(data, Message):
+            return data
+        else:
+            if data is not None:
+                payload["data"] = data
+
+        return Message(payload, generate_id=True)
 
     def create_crud_func(self, method):
         """
@@ -35,17 +53,11 @@ class Publish(object):
             """
             _crud
             """
-            if isinstance(data, Message):
-                message = data
-            else:
-                payload = {
-                    "resource": resource,
-                    "method": method
-                }
-                if data is not None:
-                    payload["data"] = data
-                message = Message(payload, generate_id=True)
-
+            headers = {
+                "resource": resource,
+                "method": method
+            }
+            message = self._create_message(headers, data)
             mid = self._conn.publish(topic="/controller",
                                      qos=2,
                                      payload=message.to_dict())
@@ -54,28 +66,33 @@ class Publish(object):
 
             # non-blocking, response mid immediately
             if block is False:
-                return mid
+                return self._wait_published(session)
             # blocking, until we get response
-            return self._wait_response(session)
+            return self._wait_resolved(session)
         return _crud
 
-    def event(self, resource, data):
+    def event(self, resource, data=None, block=True, timeout=60):
         """
         event
         """
-        payload = {
+        headers = {
             "resource": resource,
             "method": "post",
-            "tunnel": self._conn.tunnel,
-            "data": data
+            "tunnel": self._conn.tunnel
         }
-        message = Message(payload, generate_id=True)
+        message = self._create_message(headers, data)
         mid = self._conn.publish(topic="/controller", qos=2,
                                  payload=message.to_dict())
 
-        return mid
+        session = self._session.create(message, mid=mid, age=timeout)
+        session["status"] = Status.SENDING
+        # non-blocking, response mid immediately
+        if block is False:
+            return session
+        # blocking, until it is been published
+        return self._wait_published(session)
 
-    def direct(self, resource, data):
+    def direct(self, resource, data=None, block=True, timeout=60):
         """
         direct
         """
