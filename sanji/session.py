@@ -66,6 +66,7 @@ class Session(object):
                     session["status"] = Status.SENT
                     session["is_published"].set()
                     return session
+            logger.debug("Warning message, nothing can be resolved (published")
             return None
 
     def create(self, message, mid=None, age=60):
@@ -95,9 +96,12 @@ class Session(object):
                     # TODO: use system time diff to decrease age
                     #       instead of just - 1 ?
                     session["age"] = session["age"] - 0.5
+
+                    # age > 0
                     if session["age"] > 0:
                         continue
 
+                    # age <= 0, timeout!
                     logger.debug("Message timeout id:%s", session_id)
                     if session["is_published"].is_set():
                         session["status"] = Status.SEND_TIMEOUT

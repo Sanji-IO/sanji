@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import unittest
 from time import sleep
 from threading import Thread
@@ -54,8 +53,7 @@ class TestPublishClass(unittest.TestCase):
             session["is_resolved"].set()
             session["is_published"].set()
             session["status"] = Status.SENT
-        print self.session.session_list
-        # map(threads, lambda t: t.join(1))
+
         for thread in threads:
             thread.join(1)
             self.assertFalse(thread.is_alive())
@@ -105,32 +103,6 @@ class TestPublishClass(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_event(self):
-        this = self
-
-        # test non-block
-        def on_publish(sent_mid):
-            def _on_publish(self, mid):
-                this.assertEqual(sent_mid, mid)
-            return _on_publish
-
-        def on_message(self, message):
-            msg = json.loads(message)
-            msg = Message(msg["payload"])
-            this.assertEqual("post", msg.method)
-            this.assertEqual({"type": "notify1", "message": "hi"},
-                             msg.data)
-            this.session.resolve(msg.id, msg)
-            this.conn.disconnect()
-
-        session = self.publish.event("/test/event1",
-                                     {"type": "notify1", "message": "hi"},
-                                     block=False)
-        self.conn.set_on_publish(on_publish(session["mid"]))
-        self.conn.set_on_message(on_message)
-        self.conn.connect()
-
-        # test block
-
         # Resolve StatusError
         def send_block():
             self.publish.event("/test/event2",
@@ -139,15 +111,45 @@ class TestPublishClass(unittest.TestCase):
         thread.daemon = True
         thread.start()
         sleep(0.5)
-
         self.assertEqual(len(self.session.session_list), 1)
         for session in self.session.session_list.itervalues():
             self.session.resolve_send(session["mid"])
         thread.join(0.5)
         self.assertFalse(thread.is_alive())
+        self.assertEqual(len(self.session.session_list), 0)
 
     def test_direct(self):
-        self.publish.direct(None, None)
+
+        def send_nonblock():
+            session = self.publish.direct.get("/test/direct1", {
+                                              "type": "direct1",
+                                              "message": "hi"},
+                                              block=False)
+            self.session.resolve(session["message"].id, None)
+        thread = Thread(target=send_nonblock, args=())
+        thread.daemon = True
+        thread.start()
+        sleep(0.5)
+        self.assertEqual(len(self.session.session_list), 1)
+        for session in self.session.session_list.itervalues():
+            session["status"] = Status.SENT
+            session["is_published"].set()
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
+
+        def send_block():
+            self.publish.direct.get("/test/direct2",
+                                    {"type": "direct2", "message": "hi"},
+                                    block=True)
+        thread = Thread(target=send_block, args=())
+        thread.daemon = True
+        thread.start()
+        sleep(0.5)
+        self.assertEqual(len(self.session.session_list), 1)
+        session = self.session.session_list.values()[0]
+        self.session.resolve(session["message"].id, session["mid"])
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
 
     def test_response(self):
         func = self.publish.response(None)

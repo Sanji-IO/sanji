@@ -8,16 +8,25 @@ from sanji.session import TimeoutError
 from sanji.session import StatusError
 
 
+class Object(object):
+    pass
+
+
 class Publish(object):
 
     """
     Publish class
     """
+
     def __init__(self, connection, session):
         self._conn = connection
         self._session = session
+        self.direct = Object()
         for method in ["get", "post", "put", "delete"]:
             self.__setattr__(method, self.create_crud_func(method))
+            self.direct.__setattr__(method,
+                                    self.create_crud_func(method, "DIRECT"))
+        self.event = self.create_crud_func("post", "EVENT")
 
     def _wait_resolved(self, session):
         session["is_resolved"].wait()
@@ -27,11 +36,14 @@ class Publish(object):
             return session["resolve_message"]
         raise StatusError(session)
 
-    def _wait_published(self, session):
+    def _wait_published(self, session, no_response=False):
         session["is_published"].wait()
         if session["status"] == Status.SEND_TIMEOUT:
             raise TimeoutError(session)
         elif session["status"] == Status.SENT:
+            # if no_resonse is required, we resolve it as empty response data
+            if no_response is True:
+                self._session.resolve(session["message"].id)
             return session
         raise StatusError(session)
 
@@ -45,18 +57,27 @@ class Publish(object):
 
         return Message(payload, generate_id=True)
 
-    def create_crud_func(self, method):
+    def create_crud_func(self, method, request_type="CRUD"):
         """
         create_crud_func
         """
         def _crud(resource, data=None, block=True, timeout=60):
             """
             _crud
+
+            block
+                True: wait until response arrival
+                False: wait until message is already published to local broker
             """
             headers = {
                 "resource": resource,
                 "method": method
             }
+
+            # DIRECT/EVENT message needs put tunnel in headers for controller
+            if request_type == "DIRECT" or request_type == "EVENT":
+                headers["tunnel"] = self._conn.tunnel
+
             message = self._create_message(headers, data)
             mid = self._conn.publish(topic="/controller",
                                      qos=2,
@@ -64,49 +85,35 @@ class Publish(object):
             session = self._session.create(message, mid=mid, age=timeout)
             session["status"] = Status.SENDING
 
-            # non-blocking, response mid immediately
+            if request_type == "EVENT":  # EVENT always block is False
+                return self._wait_published(session, no_response=True)
+
+            # blocking, until we get response or published
             if block is False:
                 return self._wait_published(session)
-            # blocking, until we get response
             return self._wait_resolved(session)
         return _crud
 
-    def event(self, resource, data=None, block=True, timeout=60):
-        """
-        event
-        """
-        headers = {
-            "resource": resource,
-            "method": "post",
-            "tunnel": self._conn.tunnel
-        }
-        message = self._create_message(headers, data)
-        mid = self._conn.publish(topic="/controller", qos=2,
-                                 payload=message.to_dict())
+    # def event(self, resource, data=None, block=True, timeout=60):
+    #     """
+    #     event
+    #     """
+    #     headers = {
+    #         "resource": resource,
+    #         "method": "post",
+    #         "tunnel": self._conn.tunnel
+    #     }
+    #     message = self._create_message(headers, data)
+    #     mid = self._conn.publish(topic="/controller", qos=2,
+    #                              payload=message.to_dict())
 
-        session = self._session.create(message, mid=mid, age=timeout)
-        session["status"] = Status.SENDING
-        # non-blocking, response mid immediately
-        if block is False:
-            return session
-        # blocking, until it is been published
-        return self._wait_published(session)
-
-    def direct(self, resource, data=None, block=True, timeout=60):
-        """
-        direct
-        """
-        payload = {
-            "resource": resource,
-            "method": "post",
-            "tunnel": self._conn.tunnel,
-            "data": data
-        }
-        message = Message(payload, generate_id=True)
-        mid = self._conn.publish(topic="/controller", qos=2,
-                                 payload=message.to_dict())
-
-        return mid
+    #     session = self._session.create(message, mid=mid, age=timeout)
+    #     session["status"] = Status.SENDING
+    #     # non-blocking, response mid immediately
+    #     if block is False:
+    #         return session
+    #     # blocking, until it is been published
+    #     return self._wait_published(session)
 
     def response(self, orig_message):
         """
