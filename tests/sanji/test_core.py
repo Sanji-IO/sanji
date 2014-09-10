@@ -247,12 +247,12 @@ class TestSanjiClass(unittest.TestCase):
                 previous = func
             self.assertLessEqual(previous._order, func._order)
 
-    def test_run(self):
-        self.test_model.run()
+    def test_start(self):
+        self.test_model.start()
 
     def test_register(self):
         this = self
-        self.test_model.run()
+        self.test_model.start()
         # prepare ressponse messages
         msg = Message({
             "id": 1234,

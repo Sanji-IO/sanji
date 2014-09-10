@@ -50,9 +50,9 @@ class TestPublishClass(unittest.TestCase):
             threads.append(thread)
         sleep(0.5)
         for session in self.session.session_list.itervalues():
+            session["status"] = Status.SENT
             session["is_resolved"].set()
             session["is_published"].set()
-            session["status"] = Status.SENT
 
         for thread in threads:
             thread.join(1)
@@ -210,22 +210,22 @@ class TestPublishClass(unittest.TestCase):
     def test__wait_published(self):
         # SEND_TIMEOUT
         session = self.session.create(Message({}, generate_id=True))
-        session["is_published"].set()
         session["status"] = Status.SEND_TIMEOUT
+        session["is_published"].set()
         with self.assertRaises(TimeoutError):
             self.publish._wait_published(session)
 
         # SENT
         session = self.session.create(Message({}, generate_id=True))
-        session["is_published"].set()
         session["status"] = Status.SENT
+        session["is_published"].set()
         self.assertDictEqual(self.publish._wait_published(session),
                              session)
 
         # UNKNOWN
         session = self.session.create(Message({}, generate_id=True))
-        session["is_published"].set()
         session["status"] = 999
+        session["is_published"].set()
         with self.assertRaises(StatusError):
             self.publish._wait_published(session)
 

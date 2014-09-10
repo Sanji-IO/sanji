@@ -137,9 +137,9 @@ class Sanji(object):
     def on_publish(self, client, userdata, mid):
         self._session.resolve_send(mid)
 
-    def run(self):
+    def start(self):
         """
-        run
+        start
         """
         # create a thread pool
         for _ in range(0, self.dispatch_thread_count):
@@ -160,7 +160,14 @@ class Sanji(object):
 
         logger.debug("Thread pool is created")
         # start connection, this will block until stop()
-        self._conn.connect()
+        self.conn_thread = Thread(target=self._conn.connect)
+        self.conn_thread.daemon = True
+        self.conn_thread.start()
+
+        if hasattr(self, 'run'):
+            self.run()
+
+        self.conn_thread.join()
 
     def stop(self):
         """
