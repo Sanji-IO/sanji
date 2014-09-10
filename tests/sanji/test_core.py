@@ -29,34 +29,34 @@ class TestModel(Sanji):
         pass
 
     @Route(resource="/model/test/:id", methods="get")
-    def get(self, message):
+    def get(self, message, response):
         pass
 
     @Route(resource="/model/test/:id", methods="post")
-    def post(self, message):
+    def post(self, message, response):
         pass
 
     @Route(resource="/model/test/:id", methods="delete")
-    def delete(self, message):
+    def delete(self, message, response):
         pass
 
     @Route(resource="/model/test/:id", methods="put")
-    def put(self, message):
+    def put(self, message, response):
         pass
 
     @Route(resource="/model/:id", methods=["get", "delete", "put"])
-    def generic(self, message):
+    def generic(self, message, response):
         pass
 
     @Route(resource="/model/:thisismyid", methods=["get", "delete", "put"])
-    def thisismyid(self, message):
+    def thisismyid(self, message, response):
         pass
 
     def a11111(self):
         pass
 
     @Route(resource="/model", methods="put")
-    def put2(self, message):
+    def put2(self, message, response):
         pass
 
 
@@ -145,7 +145,7 @@ class TestSanjiClass(unittest.TestCase):
         })
 
         def create_mock_handler(index):
-            def _mock_handler(self, message):
+            def _mock_handler(self, message, response):
                 queue.put(index)
 
             return _mock_handler
@@ -164,7 +164,7 @@ class TestSanjiClass(unittest.TestCase):
             }
         })
 
-        def mock_handler_2(self, message):
+        def mock_handler_2(self, message, response):
             this.assertEqual(12345, int(message.param["id"]))
 
         self.test_model.router.get("/test__dispatch_message/:id",

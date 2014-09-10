@@ -115,7 +115,8 @@ class Sanji(object):
                 continue
 
             for result in results:  # same route
-                map(lambda cb: cb(self, result["message"]),
+                resp = self.publish.create_response(result["message"])
+                map(lambda cb: cb(self, result["message"], resp),
                     result["callbacks"])
         logger.debug("_dispatch_message thread is terminated")
 
