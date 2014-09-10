@@ -12,6 +12,7 @@ import logging
 import os
 import signal
 import sys
+from time import sleep
 from threading import Event
 from threading import Thread
 
@@ -20,6 +21,7 @@ from sanji.message import MessageType
 from sanji.publish import Publish
 from sanji.router import Router
 from sanji.session import Session
+from sanji.session import TimeoutError
 
 
 """
@@ -67,6 +69,7 @@ class Sanji(object):
         self._conn.set_on_connect(self.on_connect)
         self._conn.set_on_message(self.on_message)
         self._conn.set_on_connect(self.on_connect)
+        self._conn.set_on_publish(self.on_publish)
 
         # Publisher
         self.publish = Publish(self._conn, self._session)
@@ -130,6 +133,9 @@ class Sanji(object):
                 logger.debug("Unknow response. Not for me.")
         logger.debug("_resolve_responses thread is terminated")
 
+    def on_publish(self, userdata, mid):
+        self._session.resolve_send(mid)
+
     def run(self):
         """
         run
@@ -142,6 +148,15 @@ class Sanji(object):
             thread.daemon = True
             thread.start()
             self.dispatch_thread_list.append((thread, stop_event))
+
+        for _ in range(0, 1):
+            stop_event = Event()
+            thread = Thread(target=self._resolve_responses,
+                            name="thread-%s" % _, args=(stop_event,))
+            thread.daemon = True
+            thread.start()
+            self.dispatch_thread_list.append((thread, stop_event))
+
         logger.debug("Thread pool is created")
         # start connection, this will block until stop()
         self._conn.connect()
@@ -158,6 +173,8 @@ class Sanji(object):
             event.set()
         for thread, event in self.dispatch_thread_list:
             thread.join()
+
+        logger.debug("Shutdown successfully")
 
     def init(self):
         """
@@ -177,8 +194,8 @@ class Sanji(object):
         """
         try:
             message = Message(msg.payload)
-        except TypeError:
-            logger.debug("Got an invaild json string")
+        except TypeError as e:
+            logger.debug(e)
             return
 
         if message.type() == MessageType.UNKNOWN:
@@ -209,8 +226,54 @@ class Sanji(object):
         self._conn.set_tunnel(self._conn.tunnel)
         logger.debug("Connection established with result code %s" % rc)
 
-    def register(self):
-        self.publish.post("/controller/registration")
+    def register(self, reg_data, retry=True, interval=1, timeout=3):
+        """
+        register function
+        retry
+            True, infinity retries
+            False, no retries
+            Number, retries times
+        interval
+            time period for retry
+        return
+            False if no success
+            Tunnel if success
+        """
+        while True:
+            try:
+                resp = self.publish.direct.post("/controller/registration",
+                                                reg_data, timeout=timeout)
+                # status error
+                if resp.code == 200:
+                    # register success
+                    logger.info("Register successfully tunnel: %s"
+                                % (resp.data["tunnel"],))
+                    self._conn.set_tunnel(resp.data["tunnel"])
+                    return resp.data["tunnel"]
+
+                logger.info("Register response message status: %s"
+                            % (resp.code,) + " retry: %s" % (retry,))
+            except TimeoutError:
+                logger.info("Register message is timeout")
+
+            # register unsuccessful goes here
+            # infinity retry
+            if retry is True:
+                sleep(interval)
+                continue
+
+            # no retry
+            if retry is False:
+                return False
+
+            # retrying
+            try:
+                retry = retry - 1
+                if retry <= 0:
+                    return False
+            except TypeError as e:
+                raise e
+            sleep(interval)
 
 
 def Route(resource=None, methods=None):

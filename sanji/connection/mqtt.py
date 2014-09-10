@@ -4,11 +4,15 @@
 import os
 import sys
 import uuid
+import logging
 import paho.mqtt.client as mqtt
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 from message import Message
 from message import MessageType
 from connection import Connection
+
+
+logger = logging.getLogger()
 
 
 class MQTT(Connection):
@@ -32,6 +36,7 @@ class MQTT(Connection):
         """
         connect
         """
+        logger.debug("Start connecting to broker")
         self.client.connect(self.broker_ip, self.broker_port,
                             self.broker_keepalive)
         self.client.loop_forever()
@@ -40,6 +45,7 @@ class MQTT(Connection):
         """
         disconnect
         """
+        logger.debug("Disconnect to broker")
         self.client.loop_stop()
 
     def set_tunnel(self, tunnel):
@@ -47,10 +53,12 @@ class MQTT(Connection):
         set_tunnel(self, tunnel):
         """
         if self.tunnel is not None:
+            logger.debug("Unsubscribe: %s", (self.tunnel,))
             self.client.unsubscribe(str(self.tunnel))
 
         self.tunnel = tunnel
         self.client.subscribe(str(self.tunnel))
+        logger.debug("Subscribe: %s", (self.tunnel,))
 
     def set_on_connect(self, func):
         """

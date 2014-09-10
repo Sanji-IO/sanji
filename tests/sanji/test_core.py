@@ -8,6 +8,7 @@ import sys
 from threading import Event
 from threading import Thread
 import unittest
+import logging
 
 
 try:
@@ -249,6 +250,125 @@ class TestSanjiClass(unittest.TestCase):
     def test_run(self):
         self.test_model.run()
 
+    def test_register(self):
+        this = self
+        self.test_model.run()
+        # prepare ressponse messages
+        msg = Message({
+            "id": 1234,
+            "code": 200,
+            "method": "post",
+            "resource": "/controller/registration",
+            "data": {
+                "tunnel": "good_luck_sanji"
+            }
+        })
+
+        msg_failed = Message({
+            "id": 1234,
+            "code": 500,
+            "method": "post",
+            "resource": "/controller/registration",
+            "data": {}
+        })
+
+        reg_data = Message({
+            "id": 1234,
+            "method": "post",
+            "resource": "/controller/registration",
+            "name": "test",
+            "data": {
+                "tunnel": "Temp_tunnel_for_test",
+                "description": "This is a model without description.",
+                "hook": [],
+                "role": "model",
+                "resources": [
+                    "/network/ethernet",
+                    "/network/cellular"
+                ]
+            }
+        })
+        # register OK
+        thread = Thread(target=self.test_model.register, args=(reg_data,))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg)
+        thread.join(5)
+        self.assertFalse(thread.is_alive())
+
+        # register with failed
+        thread = Thread(target=self.test_model.register,
+                        args=(reg_data, True, 0))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg)
+        thread.join(5)
+        self.assertFalse(thread.is_alive())
+
+        # register with failed
+        thread = Thread(target=self.test_model.register,
+                        args=(reg_data, False))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
+
+        # register with failed and raise error
+        thread = Thread(target=self.test_model.register,
+                        args=(reg_data, 2))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
+
+        class ThreadTest(Thread):
+
+            def __init__(self, exception_class=False, *args, **kwargs):
+                Thread.__init__(self, *args, **kwargs)
+                self.run_old = self.run
+
+                def run_except(*args, **kwargs):
+                    if exception_class is False:
+                        self.run_old(*args, **kwargs)
+                        return
+
+                    with this.assertRaises(exception_class):
+                        self.run_old(*args, **kwargs)
+                self.run = run_except
+
+        # register with failed and raise error
+        thread = ThreadTest(target=self.test_model.register,
+                            args=(reg_data, "abc"),
+                            exception_class=TypeError)
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.test_model.res_queue.put(msg_failed)
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
+
+        # register with failed and raise error
+        thread = ThreadTest(target=self.test_model.register,
+                            args=(reg_data, 0, 0, 0.1))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
 
 if __name__ == "__main__":
+    FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'
+    logging.basicConfig(level=20, format=FORMAT)
+    logger = logging.getLogger('test')
     unittest.main()

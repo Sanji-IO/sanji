@@ -17,6 +17,10 @@ except ImportError as e:
     exit(1)
 
 
+class Object(object):
+    pass
+
+
 class ConnectionMockup(Connection):
 
     def __init__(self):
@@ -47,7 +51,11 @@ class ConnectionMockup(Connection):
         while self.disconnect_event.is_set() is False:
             while self.message_queue.empty() is False:
                 message = self.message_queue.get()
-                self.on_message(self, message)
+                message = json.loads(message)
+                msg_obj = Object()
+                for key in message:
+                    msg_obj.__setattr__(key, message[key])
+                self.on_message(self, None, msg_obj)
 
     def connect(self):
         self.__t_onpublish = Thread(target=self.__onpublish)

@@ -94,27 +94,6 @@ class Publish(object):
             return self._wait_resolved(session)
         return _crud
 
-    # def event(self, resource, data=None, block=True, timeout=60):
-    #     """
-    #     event
-    #     """
-    #     headers = {
-    #         "resource": resource,
-    #         "method": "post",
-    #         "tunnel": self._conn.tunnel
-    #     }
-    #     message = self._create_message(headers, data)
-    #     mid = self._conn.publish(topic="/controller", qos=2,
-    #                              payload=message.to_dict())
-
-    #     session = self._session.create(message, mid=mid, age=timeout)
-    #     session["status"] = Status.SENDING
-    #     # non-blocking, response mid immediately
-    #     if block is False:
-    #         return session
-    #     # blocking, until it is been published
-    #     return self._wait_published(session)
-
     def response(self, orig_message):
         """
         response

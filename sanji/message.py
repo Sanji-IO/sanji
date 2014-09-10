@@ -111,7 +111,7 @@ class Message(object):
     Message
     """
     def __init__(self, message, generate_id=False):
-        if isinstance(message, str):
+        if isinstance(message, str) or isinstance(message, unicode):
             try:
                 message = json.loads(message)
             except Exception:
