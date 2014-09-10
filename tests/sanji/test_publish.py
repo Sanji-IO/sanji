@@ -151,9 +151,23 @@ class TestPublishClass(unittest.TestCase):
         thread.join(0.5)
         self.assertFalse(thread.is_alive())
 
-    def test_response(self):
-        func = self.publish.response(None)
-        func()
+    def test_create_response(self):
+        message = Message({"test": "block"}, generate_id=True)
+
+        def send_block():
+            response = self.publish.create_response(message)
+            response(500, {"ccc": "moxa best"})
+
+        thread = Thread(target=send_block, args=())
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        self.assertEqual(len(self.session.session_list), 1)
+        for session in self.session.session_list.itervalues():
+            session["status"] = Status.SENT
+            session["is_published"].set()
+        thread.join(0.5)
+        self.assertFalse(thread.is_alive())
 
     def test__create_message(self):
         # input dict

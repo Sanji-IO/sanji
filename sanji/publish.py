@@ -94,13 +94,18 @@ class Publish(object):
             return self._wait_resolved(session)
         return _crud
 
-    def response(self, orig_message):
+    def create_response(self, message):
         """
-        response
+        return function for response
         """
-        def _response():
+        def _response(code=200, data=None):
             """
             _response
             """
-            pass
+            message.payload = data
+            message.__setattr__('code', code)
+            mid = self._conn.publish(topic="/controller",
+                                     qos=2, payload=message.to_dict())
+            session = self._session.create(message, mid=mid, age=1)
+            return self._wait_published(session, no_response=True)
         return _response
