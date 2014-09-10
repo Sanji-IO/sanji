@@ -2,10 +2,15 @@
 Publish message module
 """
 
+import logging
+
 from sanji.message import Message
 from sanji.session import Status
 from sanji.session import TimeoutError
 from sanji.session import StatusError
+
+
+logger = logging.getLogger()
 
 
 class Object(object):
@@ -104,8 +109,13 @@ class Publish(object):
             """
             message.payload = data
             message.__setattr__('code', code)
+            if hasattr(message, 'query'):
+                del message.query
+            if hasattr(message, 'param'):
+                del message.param
             mid = self._conn.publish(topic="/controller",
                                      qos=2, payload=message.to_dict())
-            session = self._session.create(message, mid=mid, age=1)
+            logging.debug("sending response as mid: %s" % mid)
+            session = self._session.create(message, mid=mid, age=10)
             return self._wait_published(session, no_response=True)
         return _response

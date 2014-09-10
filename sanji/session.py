@@ -72,6 +72,7 @@ class Session(object):
     def create(self, message, mid=None, age=60):
         with self.session_lock:
             if self.session_list.get(message.id, None) is not None:
+                logging.debug("Message id: %s duplicate!", message.id)
                 return None
             session = {
                 "status": Status.CREATED,
@@ -107,8 +108,8 @@ class Session(object):
                         session["status"] = Status.SEND_TIMEOUT
                     else:
                         session["status"] = Status.RESPONSE_TIMEOUT
-                    session["is_resolved"].set()
                     session["is_published"].set()
+                    session["is_resolved"].set()
 
                     self.timeout_queue.append(session)
 

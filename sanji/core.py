@@ -134,7 +134,7 @@ class Sanji(object):
                 logger.debug("Unknow response. Not for me.")
         logger.debug("_resolve_responses thread is terminated")
 
-    def on_publish(self, userdata, mid):
+    def on_publish(self, client, userdata, mid):
         self._session.resolve_send(mid)
 
     def run(self):
@@ -195,7 +195,7 @@ class Sanji(object):
         """
         try:
             message = Message(msg.payload)
-        except TypeError as e:
+        except (TypeError, ValueError) as e:
             logger.debug(e)
             return
 

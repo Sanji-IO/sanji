@@ -43,7 +43,7 @@ class ConnectionMockup(Connection):
             self._publish_lock.release()
 
             def pub(mid):
-                self.on_publish(self, mid)
+                self.on_publish(self, None, mid)
 
             map(pub, arrival)
 

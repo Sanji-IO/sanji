@@ -5,11 +5,17 @@ import os
 import sys
 import uuid
 import logging
+import json
 import paho.mqtt.client as mqtt
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
-from message import Message
-from message import MessageType
-from connection import Connection
+
+
+try:
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
+    from sanji.connection.connection import Connection
+except ImportError as e:
+    print e
+    print "Please check the python PATH for import test module."
+    exit(1)
 
 
 logger = logging.getLogger()
@@ -78,22 +84,18 @@ class MQTT(Connection):
         """
         self.client.on_publish = func
 
-    def publish(self, message, msg_type=MessageType.REQUEST,
-                topic="/controller", qos=2):
+    def publish(self, topic="/controller", qos=2, payload=None):
         """
-        publish
+        publish(self, topic, payload=None, qos=0, retain=False)
+        Returns a tuple (result, mid), where result is MQTT_ERR_SUCCESS to
+        indicate success or MQTT_ERR_NO_CONN if the client is not currently
+        connected.  mid is the message ID for the publish request. The mid
+        value can be used to track the publish request by checking against the
+        mid argument in the on_publish() callback if it is defined.
         """
-        if not isinstance(message, Message):
-            raise TypeError("message should be Message instance")
-
-        if message.type() == MessageType.UNKNOWN:
-            raise ValueError("message should be vaild MessageType")
-
-        message_id = None
-        if msg_type == MessageType.REQUEST or \
-           msg_type == MessageType.DIRECT:
-            message_id = message.generate_id()
-        else:
-            message_id = message.id
-
-        return message_id
+        result = self.client.publish(topic,
+                                     payload=json.dumps(payload),
+                                     qos=qos)
+        if result[0] == mqtt.MQTT_ERR_NO_CONN:
+            raise RuntimeError("No connection")
+        return result[1]
