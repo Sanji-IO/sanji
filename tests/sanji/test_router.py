@@ -87,6 +87,18 @@ class TestRouteClass(unittest.TestCase):
         message = Message(request)
         self.assertEqual(len(self.route.dispatch(message)), 1)
 
+    def test_get_methods(self):
+        self.route.get((lambda x: x, None))
+        self.route.post((lambda x: x, None))
+        self.route.delete((lambda x: x, None))
+        self.route.delete((lambda x: x, None))
+        methods = self.route.get_methods()
+        self.assertEqual(len(methods), 3)
+        self.assertIn('post', methods)
+        self.assertIn('get', methods)
+        self.assertIn('delete', methods)
+        self.assertNotIn('put', methods)
+
 
 class TestRouterClass(unittest.TestCase):
     def setUp(self):

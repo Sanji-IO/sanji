@@ -61,6 +61,13 @@ class Route(object):
             callbacks.append(handler["callback"])
         return callbacks
 
+    def get_methods(self):
+        methods = set()
+        for handler in self.handlers:
+            methods.add(handler["method"])
+
+        return methods
+
 
 class Router(object):
     """
