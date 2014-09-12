@@ -88,10 +88,13 @@ class TestRouteClass(unittest.TestCase):
         self.assertEqual(len(self.route.dispatch(message)), 1)
 
     def test_get_methods(self):
-        self.route.get((lambda x: x, None))
-        self.route.post((lambda x: x, None))
-        self.route.delete((lambda x: x, None))
-        self.route.delete((lambda x: x, None))
+        def func():
+            pass
+
+        self.route.get(func)
+        self.route.post(func)
+        self.route.delete(func)
+        self.route.delete(func)
         methods = self.route.get_methods()
         self.assertEqual(len(methods), 3)
         self.assertIn('post', methods)
@@ -196,6 +199,30 @@ class TestRouterClass(unittest.TestCase):
         result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
         # test dispatch threading
+
+    def test_get_routes(self):
+        def func():
+            pass
+        self.router.post("/test/resource/", func)
+        self.router.route("/test/resource/:id") \
+            .get(func) \
+            .post(func) \
+            .delete(func) \
+            .put(func)
+
+        routes = self.router.get_routes()
+
+        self.assertIn("/test/resource/", routes)
+        methods = routes["/test/resource/"]
+        self.assertIn('post', methods)
+
+        self.assertIn("/test/resource/:id", routes)
+        methods = routes["/test/resource/:id"]
+        self.assertIn('get', methods)
+        self.assertIn('post', methods)
+        self.assertIn('delete', methods)
+        self.assertIn('put', methods)
+
 
 if __name__ == "__main__":
     unittest.main()

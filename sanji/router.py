@@ -66,7 +66,7 @@ class Route(object):
         for handler in self.handlers:
             methods.add(handler["method"])
 
-        return methods
+        return list(methods)
 
 
 class Router(object):
@@ -122,3 +122,10 @@ class Router(object):
             })
 
         return results
+
+    def get_routes(self):
+        routes = {}
+        for resource, route in self.routes.iteritems():
+            routes.update({resource: route.get_methods()})
+
+        return routes
