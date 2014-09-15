@@ -251,11 +251,28 @@ class TestSanjiClass(unittest.TestCase):
             self.assertLessEqual(previous._order, func._order)
 
     def test_start(self):
-        self.test_model.start()
+        msg = Message({
+            "id": 1234,
+            "code": 200,
+            "method": "post",
+            "resource": "/controller/registration",
+            "data": {
+                "tunnel": "good_luck_sanji"
+            }
+        })
+        thread = Thread(target=self.test_model.start)
+        thread.daemon = True
+        thread.start()
+        thread.join(0.1)
+        for msg_id in self.test_model._session.session_list:
+            msg.id = msg_id
+            self.test_model.res_queue.put(msg)
+        thread.join(1)
+        self.assertFalse(thread.is_alive())
 
     def test_register(self):
         this = self
-        self.test_model.start()
+        self.test_model._create_thread_pool()
         # prepare ressponse messages
         msg = Message({
             "id": 1234,

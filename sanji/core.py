@@ -139,10 +139,7 @@ class Sanji(object):
         with self._session.session_lock:
             self._session.resolve_send(mid)
 
-    def start(self):
-        """
-        start
-        """
+    def _create_thread_pool(self):
         # create a thread pool
         for _ in range(0, self.dispatch_thread_count):
             stop_event = Event()
@@ -161,10 +158,21 @@ class Sanji(object):
             self.dispatch_thread_list.append((thread, stop_event))
 
         logger.debug("Thread pool is created")
+
+    def start(self):
+        """
+        start
+        """
+        # create resp, req thread pool
+        self._create_thread_pool()
+
         # start connection, this will block until stop()
         self.conn_thread = Thread(target=self._conn.connect)
         self.conn_thread.daemon = True
         self.conn_thread.start()
+
+        # register model to controller...
+        self.register(self.get_model_profile())
 
         if hasattr(self, 'run'):
             self.is_ready.wait()
@@ -299,7 +307,15 @@ class Sanji(object):
             sleep(interval)
 
     def get_model_profile(self):
-        pass
+        profile = {
+            'name': self.model_name,
+            'description': '',
+            'tunnel': self._conn.tunnel,
+            'role': 'model',
+            'resources': [_ for _ in self.router.get_routes()]
+        }
+
+        return profile
 
 
 def Route(resource=None, methods=None):
