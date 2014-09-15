@@ -1,7 +1,7 @@
 from collections import deque
 import logging
 from threading import Event
-from threading import Lock
+from threading import RLock
 from threading import Thread
 from time import sleep
 from time import time
@@ -36,7 +36,7 @@ class Session(object):
     """
     def __init__(self):
         self.session_list = {}
-        self.session_lock = Lock()
+        self.session_lock = RLock()
         self.timeout_queue = deque([], maxlen=10)
         self.stop_event = Event()
         self.thread_aging = Thread(target=self.aging)
@@ -52,7 +52,7 @@ class Session(object):
             session = self.session_list.pop(msg_id, None)
             if session is None:
                 # TODO: Warning message, nothing can be resolved.
-                logger.debug("Warning message, nothing can be resolved")
+                logger.debug("Nothing can be resolved message id: %s" % msg_id)
                 return
             session["resolve_message"] = message
             session["status"] = status
@@ -66,7 +66,7 @@ class Session(object):
                     session["status"] = Status.SENT
                     session["is_published"].set()
                     return session
-            logger.debug("Warning message, nothing can be resolved (published")
+            logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
             return None
 
     def create(self, message, mid=None, age=60):
