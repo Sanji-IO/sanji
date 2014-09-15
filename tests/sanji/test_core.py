@@ -59,6 +59,9 @@ class TestModel(Sanji):
     def put2(self, message, response):
         pass
 
+    def run(self):
+        pass
+
 
 class TestRouteFunction(unittest.TestCase):
 
@@ -330,7 +333,7 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.res_queue.put(msg_failed)
         thread.join(0.5)
         self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
+        thread.join(1)
         self.assertFalse(thread.is_alive())
 
         class ThreadTest(Thread):
@@ -366,6 +369,14 @@ class TestSanjiClass(unittest.TestCase):
         thread.start()
         thread.join(0.5)
         self.assertFalse(thread.is_alive())
+
+    def test_get_model_profile(self):
+        self.test_model.get_model_profile()
+
+    def test_exit(self):
+        with self.assertRaises(SystemExit):
+            self.test_model.exit()
+            print "exit!!!"
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'

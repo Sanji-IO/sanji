@@ -62,6 +62,7 @@ class Sanji(object):
 
         # Message Bus
         self._conn = connection
+        self.is_ready = Event()
         self.req_queue = Queue()
         self.res_queue = Queue()
 
@@ -75,7 +76,7 @@ class Sanji(object):
         self.publish = Publish(self._conn, self._session)
 
         # Register signal to call stop()
-        signal.signal(signal.SIGINT, self.stop)
+        signal.signal(signal.SIGINT, self.exit)
 
         # Auto-register routes
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
@@ -135,7 +136,8 @@ class Sanji(object):
         logger.debug("_resolve_responses thread is terminated")
 
     def on_publish(self, client, userdata, mid):
-        self._session.resolve_send(mid)
+        with self._session.session_lock:
+            self._session.resolve_send(mid)
 
     def start(self):
         """
@@ -165,15 +167,27 @@ class Sanji(object):
         self.conn_thread.start()
 
         if hasattr(self, 'run'):
-            self.run()
+            self.is_ready.wait()
+            logger.debug("Start running...")
+            self.run_thread = Thread(target=self.run)
+            self.run_thread.daemon = True
+            self.run_thread.start()
 
-        self.conn_thread.join()
+        while self.conn_thread.is_alive():
+            self.conn_thread.join(0.1)
 
-    def stop(self):
+    def exit(self, signum=None, frame=None):
+        """
+        hook ctrl + c to exit program
+        """
+        self.stop()
+        sys.exit(0)
+
+    def stop(self, *args, **kwargs):
         """
         exit
         """
-        logger.debug("Bundle is been shutting down")
+        logger.debug("Bundle has been shutting down")
         self._conn.disconnect()
 
         # TODO: shutdown all threads
@@ -181,7 +195,7 @@ class Sanji(object):
             event.set()
         for thread, event in self.dispatch_thread_list:
             thread.join()
-
+        self.is_ready.clear()
         logger.debug("Shutdown successfully")
 
     def init(self):
@@ -232,6 +246,7 @@ class Sanji(object):
             the connection result
         """
         self._conn.set_tunnel(self._conn.tunnel)
+        self.is_ready.set()
         logger.debug("Connection established with result code %s" % rc)
 
     def register(self, reg_data, retry=True, interval=1, timeout=3):
@@ -282,6 +297,9 @@ class Sanji(object):
             except TypeError as e:
                 raise e
             sleep(interval)
+
+    def get_model_profile(self):
+        pass
 
 
 def Route(resource=None, methods=None):
