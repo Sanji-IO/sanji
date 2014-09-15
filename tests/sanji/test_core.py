@@ -376,7 +376,6 @@ class TestSanjiClass(unittest.TestCase):
     def test_exit(self):
         with self.assertRaises(SystemExit):
             self.test_model.exit()
-            print "exit!!!"
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'
