@@ -91,6 +91,7 @@ class TestMessageClass(unittest.TestCase):
             "code": 200,
             "resource": "/network/cellular/1",
             "method": "get",
+            "sign": ["test"],
             "data": {}
         }
 

@@ -46,7 +46,7 @@ class MessageType(object):
         - [x] code
         - [v] method
         - [v] resource
-        - [x] sign
+        - [v] sign
         - [x] tunnel
 
         Check is direct message or not
@@ -83,8 +83,8 @@ class MessageType(object):
 
     FIELDS = {
         RESPONSE: {
-            "must": ["id", "code", "method", "resource"],
-            "prohibit": ["sign", "tunnel"]
+            "must": ["id", "code", "method", "resource", "sign"],
+            "prohibit": ["tunnel"]
         },
         REQUEST: {
 
