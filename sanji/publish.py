@@ -3,6 +3,7 @@ Publish message module
 """
 
 import logging
+from time import sleep
 
 from sanji.message import Message
 from sanji.session import Status
@@ -84,11 +85,12 @@ class Publish(object):
                 headers["tunnel"] = self._conn.tunnel
 
             message = self._create_message(headers, data)
-            mid = self._conn.publish(topic="/controller",
-                                     qos=2,
-                                     payload=message.to_dict())
-            session = self._session.create(message, mid=mid, age=timeout)
-            session["status"] = Status.SENDING
+            with self._session.session_lock:
+                mid = self._conn.publish(topic="/controller",
+                                         qos=2,
+                                         payload=message.to_dict())
+                session = self._session.create(message, mid=mid, age=timeout)
+                session["status"] = Status.SENDING
 
             if request_type == "EVENT":  # EVENT always block is False
                 return self._wait_published(session, no_response=True)
@@ -113,9 +115,61 @@ class Publish(object):
                 del message.query
             if hasattr(message, 'param'):
                 del message.param
-            mid = self._conn.publish(topic="/controller",
-                                     qos=2, payload=message.to_dict())
+
+            with self._session.session_lock:
+                mid = self._conn.publish(topic="/controller",
+                                         qos=2, payload=message.to_dict())
+                session = self._session.create(message, mid=mid, age=10)
             logging.debug("sending response as mid: %s" % mid)
-            session = self._session.create(message, mid=mid, age=10)
             return self._wait_published(session, no_response=True)
         return _response
+
+
+def Retry(target=None, args=None, kwargs=None,
+          options={"retry": True, "interval": 1}):
+    """
+    options
+        retry
+            True, infinity retries
+            False, no retries
+            Number, retries times
+        interval
+            time period for retry
+        return
+            None if no success
+            Message if success
+    """
+    print options
+    retry = options["retry"]
+    interval = options["interval"]
+
+    while True:
+        try:
+            resp = target(*args, **kwargs)
+            # status error
+            if resp.code == 200:
+                return resp
+
+            logger.info("Request got response status: %s"
+                        % (resp.code,) + " retry: %s" % (retry,))
+        except TimeoutError:
+            logger.info("Request message is timeout")
+
+        # register unsuccessful goes here
+        # infinity retry
+        if retry is True:
+            sleep(interval)
+            continue
+
+        # no retry
+        if retry is False:
+            return None
+
+        # retrying
+        try:
+            retry = retry - 1
+            if retry <= 0:
+                return None
+        except TypeError as e:
+            raise e
+        sleep(interval)

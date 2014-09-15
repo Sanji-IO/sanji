@@ -12,16 +12,15 @@ import logging
 import os
 import signal
 import sys
-from time import sleep
 from threading import Event
 from threading import Thread
 
 from sanji.message import Message
 from sanji.message import MessageType
 from sanji.publish import Publish
+from sanji.publish import Retry
 from sanji.router import Router
 from sanji.session import Session
-from sanji.session import TimeoutError
 
 
 """
@@ -47,8 +46,13 @@ class Sanji(object):
     """
     def __init__(self, connection=None):
         # Model-related
-        self.model_name = None
-        self.model_path = None
+        self.profile = {
+            "name": None,
+            "role": "model",
+            "description": None,
+            "ttl": 60,
+            "resources": []
+        }
 
         # Router-related (Dispatch)
         self.router = Router()
@@ -172,10 +176,10 @@ class Sanji(object):
         self.conn_thread.start()
 
         # register model to controller...
+        self.is_ready.wait()
         self.register(self.get_model_profile())
 
         if hasattr(self, 'run'):
-            self.is_ready.wait()
             logger.debug("Start running...")
             self.run_thread = Thread(target=self.run)
             self.run_thread.daemon = True
@@ -270,52 +274,28 @@ class Sanji(object):
             False if no success
             Tunnel if success
         """
-        while True:
-            try:
-                resp = self.publish.direct.post("/controller/registration",
-                                                reg_data, timeout=timeout)
-                # status error
-                if resp.code == 200:
-                    # register success
-                    logger.info("Register successfully tunnel: %s"
-                                % (resp.data["tunnel"],))
-                    self._conn.set_tunnel(resp.data["tunnel"])
-                    return resp.data["tunnel"]
+        resp = Retry(target=self.publish.direct.post,
+                     args=("/controller/registration", reg_data,),
+                     kwargs={"timeout": timeout},
+                     options={"retry": retry, "interval": interval})
+        if resp is None:
+            logger.error("Can\'t not register to controller")
+            sys.exit(1)
 
-                logger.info("Register response message status: %s"
-                            % (resp.code,) + " retry: %s" % (retry,))
-            except TimeoutError:
-                logger.info("Register message is timeout")
+        self._conn.set_tunnel(resp.data["tunnel"])
+        logger.info("Register successfully tunnel: %s"
+                    % (resp.data["tunnel"],))
 
-            # register unsuccessful goes here
-            # infinity retry
-            if retry is True:
-                sleep(interval)
-                continue
-
-            # no retry
-            if retry is False:
-                return False
-
-            # retrying
-            try:
-                retry = retry - 1
-                if retry <= 0:
-                    return False
-            except TypeError as e:
-                raise e
-            sleep(interval)
+    def deregister(self, retry=True, interval=1, timeout=3):
+        resp = self.publish.direct.delete("/controller/registration",
+                                          {}, timeout=timeout)
+        print resp
 
     def get_model_profile(self):
-        profile = {
-            'name': self.model_name,
-            'description': '',
-            'tunnel': self._conn.tunnel,
-            'role': 'model',
-            'resources': [_ for _ in self.router.get_routes()]
-        }
+        self.profile["resources"] = [_ for _ in self.router.get_routes()]
+        self.profile["tunnel"] = self._conn.tunnel
 
-        return profile
+        return self.profile
 
 
 def Route(resource=None, methods=None):

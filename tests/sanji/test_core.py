@@ -98,6 +98,7 @@ class TestSanjiClass(unittest.TestCase):
             "id": 1234,
             "method": "get",
             "resource": "/test__dispatch_message",
+            "sign": ["test"],
             "data": {
                 "test": "OK"
             }
@@ -113,6 +114,7 @@ class TestSanjiClass(unittest.TestCase):
             "code": 200,
             "method": "get",
             "resource": "/test__dispatch_message",
+            "sign": ["test"],
             "data": {
                 "test": "OK"
             }
@@ -212,6 +214,7 @@ class TestSanjiClass(unittest.TestCase):
             "code": 200,
             "method": "get",
             "resource": "/not_found/12345",
+            "sign": ["test"],
             "data": None
         })
         self.test_model.res_queue.put(msg)
@@ -256,6 +259,7 @@ class TestSanjiClass(unittest.TestCase):
             "code": 200,
             "method": "post",
             "resource": "/controller/registration",
+            "sign": ["test"],
             "data": {
                 "tunnel": "good_luck_sanji"
             }
@@ -279,6 +283,7 @@ class TestSanjiClass(unittest.TestCase):
             "code": 200,
             "method": "post",
             "resource": "/controller/registration",
+            "sign": ["test"],
             "data": {
                 "tunnel": "good_luck_sanji"
             }
@@ -289,6 +294,7 @@ class TestSanjiClass(unittest.TestCase):
             "code": 500,
             "method": "post",
             "resource": "/controller/registration",
+            "sign": ["test"],
             "data": {}
         })
 
