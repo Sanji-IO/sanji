@@ -109,12 +109,17 @@ class Publish(object):
             """
             _response
             """
-            message.payload = data
+            message.data = data
             message.__setattr__('code', code)
             if hasattr(message, 'query'):
                 del message.query
             if hasattr(message, 'param'):
                 del message.param
+            if hasattr(message, 'sign'):
+                if isinstance(message.sign, list):
+                    message.sign.append("fff")
+            else:
+                message.sign = ["fff"]
 
             with self._session.session_lock:
                 mid = self._conn.publish(topic="/controller",

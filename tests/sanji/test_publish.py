@@ -152,22 +152,31 @@ class TestPublishClass(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_create_response(self):
-        message = Message({"test": "block"}, generate_id=True)
+        messages = [
+            Message({"test": "block"}, generate_id=True),
+            Message({"sign": ["controller"]}, generate_id=True)
+        ]
 
-        def send_block():
-            response = self.publish.create_response(message)
+        def send_block(msg):
+            response = self.publish.create_response(msg)
             response(500, {"ccc": "moxa best"})
 
-        thread = Thread(target=send_block, args=())
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.assertEqual(len(self.session.session_list), 1)
+        threads = []
+        for message in messages:
+            thread = Thread(target=send_block, args=(message,))
+            thread.daemon = True
+            thread.start()
+            threads.append(thread)
+        map(lambda t: t.join(0.1), threads)
+
+        self.assertEqual(len(self.session.session_list), len(messages))
         for session in self.session.session_list.itervalues():
             session["status"] = Status.SENT
             session["is_published"].set()
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
+
+        for thread in threads:
+            thread.join(0.5)
+            self.assertFalse(thread.is_alive())
 
     def test__create_message(self):
         # input dict
