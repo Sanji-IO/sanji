@@ -177,6 +177,7 @@ class Sanji(object):
 
         # register model to controller...
         self.is_ready.wait()
+        self.deregister()
         self.register(self.get_model_profile())
 
         if hasattr(self, 'run'):
@@ -287,9 +288,14 @@ class Sanji(object):
                     % (resp.data["tunnel"],))
 
     def deregister(self, retry=True, interval=1, timeout=3):
-        resp = self.publish.direct.delete("/controller/registration",
-                                          {}, timeout=timeout)
-        print resp
+        data = {
+            "name": self.profile["name"]
+        }
+
+        Retry(target=self.publish.direct.delete,
+              args=("/controller/registration", data,),
+              kwargs={"timeout": timeout},
+              options={"retry": retry, "interval": interval})
 
     def get_model_profile(self):
         self.profile["resources"] = [_ for _ in self.router.get_routes()]
