@@ -202,6 +202,7 @@ class Sanji(object):
         """
         logger.debug("Bundle has been shutting down")
         self._conn.disconnect()
+        self._session.stop()
 
         # TODO: shutdown all threads
         for thread, event in self.dispatch_thread_list:
