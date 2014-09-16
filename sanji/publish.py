@@ -139,7 +139,6 @@ def Retry(target=None, args=None, kwargs=None,
             None if no success
             Message if success
     """
-    print options
     retry = options["retry"]
     interval = options["interval"]
 
