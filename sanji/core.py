@@ -9,7 +9,6 @@ from Queue import Empty
 from Queue import Queue
 import inspect
 import logging
-import os
 import signal
 import sys
 from threading import Event
@@ -22,20 +21,6 @@ from sanji.publish import Retry
 from sanji.router import Router
 from sanji.session import Session
 
-
-"""
-Status Codes
-"""
-CODE_OK = 200
-CODE_BAD_REQUEST = 400
-CODE_INTERNAL_SERVER_ERROR = 500
-
-
-"""
-Environment Variables
-"""
-BROKER_IP = os.getenv("BROKER_IP", "127.0.0.1")
-BROKER_PORT = int(os.getenv("BROKER_PORT", 1883))
 
 logger = logging.getLogger()
 
