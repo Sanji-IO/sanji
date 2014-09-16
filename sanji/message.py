@@ -38,7 +38,7 @@ class MessageType(object):
         - [v] code
         - [v] method
         - [v] resource
-        - [x] sign
+        - [v] sign
         - [x] tunnel
 
         Check is request message or not
@@ -46,7 +46,7 @@ class MessageType(object):
         - [x] code
         - [v] method
         - [v] resource
-        - [v] sign
+        - [x] sign
         - [x] tunnel
 
         Check is direct message or not
