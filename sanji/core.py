@@ -297,6 +297,8 @@ class Sanji(object):
               args=("/controller/registration", data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
+        logger.info("Deregister successfully tunnel: %s" %
+                    (self._conn.tunnel,))
 
     def get_model_profile(self):
         self.profile["resources"] = [_ for _ in self.router.get_routes()]
