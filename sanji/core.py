@@ -20,6 +20,7 @@ from sanji.publish import Publish
 from sanji.publish import Retry
 from sanji.router import Router
 from sanji.session import Session
+from sanji.bundle import Bundle
 
 
 logger = logging.getLogger()
@@ -29,15 +30,11 @@ class Sanji(object):
     """
     This is for sanji framework.
     """
-    def __init__(self, connection=None):
+    def __init__(self, bundle=None, connection=None):
         # Model-related
-        self.profile = {
-            "name": None,
-            "role": "model",
-            "description": None,
-            "ttl": 60,
-            "resources": []
-        }
+        if bundle is None:
+            bundle = Bundle()
+        self.bundle = bundle
 
         # Router-related (Dispatch)
         self.router = Router()
@@ -163,7 +160,7 @@ class Sanji(object):
         # register model to controller...
         self.is_ready.wait()
         self.deregister()
-        self.register(self.get_model_profile())
+        self.register(self.get_profile())
 
         if hasattr(self, 'run'):
             logger.debug("Start running...")
@@ -275,7 +272,7 @@ class Sanji(object):
 
     def deregister(self, retry=True, interval=1, timeout=3):
         data = {
-            "name": self.profile["name"]
+            "name": self.bundle.profile["name"]
         }
 
         Retry(target=self.publish.direct.delete,
@@ -285,11 +282,10 @@ class Sanji(object):
         logger.info("Deregister successfully tunnel: %s" %
                     (self._conn.tunnel,))
 
-    def get_model_profile(self):
-        self.profile["resources"] = [_ for _ in self.router.get_routes()]
-        self.profile["tunnel"] = self._conn.tunnel
+    def get_profile(self):
+        self.bundle.profile["tunnel"] = self._conn.tunnel
 
-        return self.profile
+        return self.bundle.profile
 
 
 def Route(resource=None, methods=None):

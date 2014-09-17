@@ -15,12 +15,16 @@ try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.core import Sanji
     from sanji.core import Route
+    from sanji.bundle import Bundle
     from sanji.message import Message
     from connection_mockup import ConnectionMockup
 except ImportError as e:
     print e
     print "Please check the python PATH for import test module."
     exit(1)
+
+bundle_dir = os.path.normpath(os.path.realpath(__file__) +
+                              './../../mockup/bundle')
 
 
 class TestModel(Sanji):
@@ -66,7 +70,9 @@ class TestModel(Sanji):
 class TestRouteFunction(unittest.TestCase):
 
     def test_route(self):
-        test_model = TestModel(connection=ConnectionMockup())
+        bundle = Bundle(bundle_dir=bundle_dir)
+        test_model = TestModel(connection=ConnectionMockup(),
+                               bundle=bundle)
         routes = test_model.router.routes
         self.assertIn("/model/test/:id", routes)
         self.assertEqual(4, len(routes["/model/test/:id"].handlers))
@@ -79,11 +85,14 @@ class TestRouteFunction(unittest.TestCase):
 class TestSanjiClass(unittest.TestCase):
 
     def setUp(self):
-        self.test_model = TestModel(connection=ConnectionMockup())
+        self.bundle = Bundle(bundle_dir=bundle_dir)
+        self.test_model = TestModel(connection=ConnectionMockup(),
+                                    bundle=self.bundle)
 
     def tearDown(self):
         self.test_model.stop()
         self.test_model = None
+        self.bundle = None
 
     def test_on_message(self):
         # Normal message
@@ -406,7 +415,7 @@ class TestSanjiClass(unittest.TestCase):
         thread.join(0.5)
         self.assertFalse(thread.is_alive())
 
-    def test_get_model_profile(self):
+    def get_profile(self):
         self.test_model.get_model_profile()
 
     def test_exit(self):
