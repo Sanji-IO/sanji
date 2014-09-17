@@ -416,6 +416,9 @@ class TestSanjiClass(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def get_profile(self):
+        """
+        TODO: needs final controller registration spec to vaild this output
+        """
         self.test_model.get_model_profile()
 
     def test_exit(self):

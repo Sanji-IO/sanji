@@ -284,7 +284,8 @@ class Sanji(object):
 
     def get_profile(self):
         self.bundle.profile["tunnel"] = self._conn.tunnel
-
+        self.bundle.profile["resources"] = [_["resource"] for _ in
+                                            self.bundle.profile["resources"]]
         return self.bundle.profile
 
 
