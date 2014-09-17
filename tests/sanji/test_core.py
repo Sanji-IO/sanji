@@ -17,6 +17,7 @@ try:
     from sanji.core import Route
     from sanji.bundle import Bundle
     from sanji.message import Message
+    from sanji.session import Status
     from connection_mockup import ConnectionMockup
 except ImportError as e:
     print e
@@ -202,6 +203,11 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
+        thread.join(0.5)
+        # let response onthefly
+        for session in self.test_model._session.session_list.itervalues():
+            session["status"] = Status.SENT
+            session["is_published"].set()
 
         while self.test_model.req_queue.empty() is False:
             pass

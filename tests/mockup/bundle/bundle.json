@@ -1,0 +1,20 @@
+{
+  "name": "mockup model",
+  "version": "1.0",
+  "author": "Zack YL Shih",
+  "email": "ZackYL.Shih@moxa.com",
+  "description": "Boopstrap is a bundle who takes care of every one.",
+  "license": "MOXA",
+  "main": "bootstrap.py",
+  "argument": "",
+  "priority": 20,
+  "hook": [],
+  "dependencies": {},
+  "repository": "",
+  "resources": [
+    {
+      "methods": "get",
+      "resource": "/sanji/bundles"
+    }
+  ]
+}

@@ -97,8 +97,11 @@ class Sanji(object):
 
             results = self.router.dispatch(message)
             if len(results) == 0:
-                logger.debug("No route be found.")
+                error_msg = "Route '%s' not found." % message.resource
+                logger.info(error_msg)
                 logger.debug(message.to_json())
+                resp = self.publish.create_response(message)
+                resp(code=404, data={"message": error_msg})
                 continue
 
             for result in results:  # same route
