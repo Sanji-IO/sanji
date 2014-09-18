@@ -11,6 +11,7 @@ import inspect
 import logging
 import signal
 import sys
+import os
 from threading import Event
 from threading import Thread
 
@@ -30,11 +31,15 @@ class Sanji(object):
     """
     This is for sanji framework.
     """
-    def __init__(self, bundle=None, connection=None):
+    def __init__(self, bundle=None, connection=None, stop_event=Event()):
+        if connection is None:
+            raise ValueError("Connection is required.")
         # Model-related
+        bundle_dir = os.path.dirname(inspect.getfile(self.__class__))
         if bundle is None:
-            bundle = Bundle()
+            bundle = Bundle(bundle_dir=bundle_dir)
         self.bundle = bundle
+        self.stop_event = stop_event
 
         # Router-related (Dispatch)
         self.router = Router()
@@ -152,27 +157,32 @@ class Sanji(object):
         """
         start
         """
-        # create resp, req thread pool
-        self._create_thread_pool()
+        def main_thread():
+            # create resp, req thread pool
+            self._create_thread_pool()
 
-        # start connection, this will block until stop()
-        self.conn_thread = Thread(target=self._conn.connect)
-        self.conn_thread.daemon = True
-        self.conn_thread.start()
+            # start connection, this will block until stop()
+            self.conn_thread = Thread(target=self._conn.connect)
+            self.conn_thread.daemon = True
+            self.conn_thread.start()
 
-        # register model to controller...
-        self.is_ready.wait()
-        self.deregister()
-        self.register(self.get_profile())
+            # register model to controller...
+            self.is_ready.wait()
+            self.deregister()
+            self.register(self.get_profile())
 
-        if hasattr(self, 'run'):
-            logger.debug("Start running...")
-            self.run_thread = Thread(target=self.run)
-            self.run_thread.daemon = True
-            self.run_thread.start()
+            if hasattr(self, 'run'):
+                logger.debug("Start running...")
+                self.run()
 
-        while self.conn_thread.is_alive():
-            self.conn_thread.join(0.1)
+        # start main_thread
+        self.main_thread = Thread(target=main_thread)
+        self.main_thread.daemon = True
+        self.main_thread.start()
+
+        # control this bundle stop or not
+        self.stop_event.wait()
+        self.stop()
 
     def exit(self, signum=None, frame=None):
         """
@@ -185,9 +195,11 @@ class Sanji(object):
         """
         exit
         """
-        logger.debug("Bundle has been shutting down")
+        logger.debug("Bundle [%s] has been shutting down" %
+                     self.bundle.profile["name"])
         self._conn.disconnect()
         self._session.stop()
+        self.stop_event.set()
 
         # TODO: shutdown all threads
         for thread, event in self.dispatch_thread_list:

@@ -97,7 +97,13 @@ class TestSanjiClass(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(BundleConfigError):
+            TestModel(connection=ConnectionMockup())
+
+        with self.assertRaises(ValueError):
             TestModel()
+
+    def test_on_publish(self):
+        self.test_model.on_publish(None, None, 1)
 
     def test_on_message(self):
         # Normal message
