@@ -16,6 +16,7 @@ try:
     from sanji.core import Sanji
     from sanji.core import Route
     from sanji.bundle import Bundle
+    from sanji.bundle import BundleConfigError
     from sanji.message import Message
     from sanji.session import Status
     from connection_mockup import ConnectionMockup
@@ -93,6 +94,10 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.stop()
         self.test_model = None
         self.bundle = None
+
+    def test_init(self):
+        with self.assertRaises(BundleConfigError):
+            TestModel()
 
     def test_on_message(self):
         # Normal message
