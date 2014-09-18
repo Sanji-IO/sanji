@@ -1,5 +1,3 @@
-__test__ = False
-
 import os
 import sys
 import unittest
@@ -13,6 +11,7 @@ try:
     from sanji.session import Session
     from sanji.message import Message
     from sanji.session import Status
+    from sanji.session import SessionError
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
@@ -56,6 +55,7 @@ class TestSessionClass(unittest.TestCase):
     def test_create(self):
         message1 = Message({}, generate_id=True)
         message2 = Message({}, generate_id=True)
+        message3 = Message({}, generate_id=True)
 
         # create session as normal
         self.session.create(message1)
@@ -63,7 +63,12 @@ class TestSessionClass(unittest.TestCase):
                          message1)
         # id duplicate
         message2.id = message1.id
-        self.assertEqual(self.session.create(message2), None)
+        session = self.session.create(message2)
+        self.assertNotEqual(session, None)
+
+        message3.id = message1.id
+        with self.assertRaises(SessionError):
+            self.session.create(message3, force=False)
 
         # aging should be test too
         sleep(1)
@@ -75,9 +80,24 @@ class TestSessionClass(unittest.TestCase):
 
     def test_aging(self):
         message1 = Message({}, generate_id=True)
+
+        # timeout (response)
         self.session.create(message1, age=0)
         sleep(1)
-        self.assertEqual(len(self.session.timeout_queue), 1)
+        try:
+            self.session.timeout_queue.pop()
+        except Exception:
+            self.fail("timeout_queue is not empty")
+
+        # timeout (send)
+        self.session.create(message1, age=1)
+        for session in self.session.session_list.itervalues():
+            session["is_published"].set()
+        sleep(1)
+        try:
+            self.session.timeout_queue.pop()
+        except Exception:
+            self.fail("timeout_queue is empty")
 
 
 if __name__ == "__main__":
