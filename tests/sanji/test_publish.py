@@ -154,7 +154,8 @@ class TestPublishClass(unittest.TestCase):
     def test_create_response(self):
         messages = [
             Message({"test": "block"}, generate_id=True),
-            Message({"sign": ["controller"]}, generate_id=True)
+            Message({"query": {}, "param": {}, "sign": ["controller"]},
+                    generate_id=True)
         ]
 
         def send_block(msg):
