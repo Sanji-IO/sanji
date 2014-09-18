@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+
 from collections import deque
 import logging
 from threading import Event
@@ -5,6 +9,8 @@ from threading import RLock
 from threading import Thread
 from time import sleep
 from time import time
+
+from sanji.message import Message
 
 
 logger = logging.getLogger()
@@ -27,6 +33,10 @@ class TimeoutError(Exception):
 
 
 class StatusError(Exception):
+    pass
+
+
+class SessionError(Exception):
     pass
 
 
@@ -69,11 +79,20 @@ class Session(object):
             logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
             return None
 
-    def create(self, message, mid=None, age=60):
+    def create(self, message, mid=None, age=60, force=True):
+        """
+        create session
+            force if you pass `force = False`, it may raise SessionError
+                due to duplicate message id
+        """
         with self.session_lock:
             if self.session_list.get(message.id, None) is not None:
-                logging.debug("Message id: %s duplicate!", message.id)
-                return None
+                if force is False:
+                    raise SessionError("Message id: %s duplicate!" %
+                                       message.id)
+                else:
+                    message = Message(message.to_dict(), generate_id=True)
+
             session = {
                 "status": Status.CREATED,
                 "message": message,

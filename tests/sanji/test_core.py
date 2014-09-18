@@ -20,7 +20,6 @@ try:
     from sanji.session import Status
     from connection_mockup import ConnectionMockup
 except ImportError as e:
-    print e
     print "Please check the python PATH for import test module."
     exit(1)
 
