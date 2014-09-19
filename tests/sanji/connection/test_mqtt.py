@@ -5,13 +5,13 @@
 # try:
 #     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../../sanji')
 #     from core import Sanji
-#     from connection.mqtt import MQTT
+#     from connection.mqtt import Mqtt
 # except ImportError:
 #     print "Please check the python PATH for import test module."
 #     exit(1)
 
 # class TestModel(Sanji):
-    
+
 #     def init(self):
 #         self.router.route("/model/:id") \
 #             .get(self.get) \
@@ -34,7 +34,7 @@
 #         print "Mosquitto broker is down."
 
 #     def setUp(self):
-#         self.model = TestModel(connection=MQTT())
+#         self.model = TestModel(connection=Mqtt())
 
 #     def tearDown(self):
 #         self.model = None

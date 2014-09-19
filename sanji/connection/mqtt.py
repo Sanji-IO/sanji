@@ -21,9 +21,9 @@ except ImportError as e:
 logger = logging.getLogger()
 
 
-class MQTT(Connection):
+class Mqtt(Connection):
     """
-    MQTT
+    Mqtt
     """
     def __init__(self, broker_ip="127.0.0.1", broker_port=1883,
                  broker_keepalive=60):

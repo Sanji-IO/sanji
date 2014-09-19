@@ -96,7 +96,7 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.req_queue.get(timeout=0.5)
+                message = self.req_queue.get(timeout=0.1)
             except Empty:
                 continue
 
@@ -183,6 +183,7 @@ class Sanji(object):
         # control this bundle stop or not
         self.stop_event.wait()
         self.stop()
+        logger.debug("Shutdown successfully")
 
     def exit(self, signum=None, frame=None):
         """
@@ -207,7 +208,6 @@ class Sanji(object):
         for thread, event in self.dispatch_thread_list:
             thread.join()
         self.is_ready.clear()
-        logger.debug("Shutdown successfully")
 
     def init(self):
         """
