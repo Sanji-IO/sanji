@@ -181,7 +181,9 @@ class Sanji(object):
         self.main_thread.start()
 
         # control this bundle stop or not
-        self.stop_event.wait()
+        while not self.stop_event.wait(0.1):
+            pass
+
         self.stop()
         logger.debug("Shutdown successfully")
 
