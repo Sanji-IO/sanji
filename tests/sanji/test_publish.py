@@ -152,6 +152,7 @@ class TestPublishClass(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_create_response(self):
+
         messages = [
             Message({"test": "block"}, generate_id=True),
             Message({"query": {}, "param": {}, "sign": ["controller"]},
@@ -159,7 +160,7 @@ class TestPublishClass(unittest.TestCase):
         ]
 
         def send_block(msg):
-            response = self.publish.create_response(msg)
+            response = self.publish.create_response(msg, "this is sign")
             response(500, {"ccc": "moxa best"})
 
         threads = []

@@ -101,7 +101,7 @@ class Publish(object):
             return self._wait_resolved(session)
         return _crud
 
-    def create_response(self, message):
+    def create_response(self, message, sign):
         """
         return function for response
         """
@@ -117,9 +117,9 @@ class Publish(object):
                 del message.param
             if hasattr(message, 'sign'):
                 if isinstance(message.sign, list):
-                    message.sign.append("fff")
+                    message.sign.append(sign)
             else:
-                message.sign = ["fff"]
+                message.sign = [sign]
 
             with self._session.session_lock:
                 mid = self._conn.publish(topic="/controller",
