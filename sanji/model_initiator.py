@@ -34,11 +34,6 @@ class ModelInitiator(object):
         """
         "   Create a db file for model.
         """
-        self.factory_json_db_path = self.model_path + "/data/" + \
-            self.model_name + ".factory.json"
-        self.json_db_path = self.model_path + "/data/" + \
-            self.model_name + ".json"
-
         if self.db_type == "json":
             if not os.path.exists(self.json_db_path):
                 if os.path.exists(self.factory_json_db_path):
@@ -46,6 +41,7 @@ class ModelInitiator(object):
                     return True
                 else:
                     print "NO: " + self.factory_json_db_path
+                    return False
 
         return False
 

@@ -60,8 +60,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         self.model_initaitor.mkdir()
         try:
-            with open(self.model_factory_db, 'a'):
-                os.utime(self.model_factory_db, None)
+            with open(self.model_initaitor.factory_json_db_path, 'a'):
+                os.utime(self.model_initaitor.factory_json_db_path, None)
         except Exception:
             self.fail("Maybe there is no folder to create file.")
 
@@ -69,9 +69,15 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db))
 
-        self.db_type = "sql"
+        self.model_initaitor.db_type = "sql"
         result = self.model_initaitor.create_db()
         self.assertFalse(result)
+
+        self.model_initaitor.db_type = "json"
+        self.model_initaitor.factory_json_db_path = "/1231231235566"
+        result = self.model_initaitor.create_db()
+        self.assertFalse(result)
+
 
 if __name__ == "__main__":
     unittest.main()
