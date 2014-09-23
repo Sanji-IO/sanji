@@ -43,6 +43,7 @@ class Mqtt(Connection):
         connect
         """
         logger.debug("Start connecting to broker")
+        #  TODO: if connect fails it will raise exception
         self.client.connect(self.broker_ip, self.broker_port,
                             self.broker_keepalive)
         self.client.loop_forever()
