@@ -7,5 +7,5 @@ setup(name='sanji',
       author='Sanji Team',
       author_email='sanji@moxa.com',
       license='MOXA',
-      packages=['sanji'],
+      packages=['sanji', 'sanji.connection'],
       zip_safe=False)
