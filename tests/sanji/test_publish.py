@@ -12,7 +12,7 @@ try:
     from sanji.session import StatusError
     from sanji.session import Status
     from sanji.message import Message
-    from connection_mockup import ConnectionMockup
+    from sanji.connection.mockup import Mockup
 except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
@@ -22,7 +22,7 @@ except ImportError:
 class TestPublishClass(unittest.TestCase):
 
     def setUp(self):
-        self.conn = ConnectionMockup()
+        self.conn = Mockup()
         self.session = Session()
         self.publish = Publish(self.conn, self.session)
 

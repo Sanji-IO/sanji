@@ -19,7 +19,7 @@ try:
     from sanji.bundle import BundleConfigError
     from sanji.message import Message
     from sanji.session import Status
-    from connection_mockup import ConnectionMockup
+    from sanji.connection.mockup import Mockup
 except ImportError as e:
     print "Please check the python PATH for import test module."
     exit(1)
@@ -75,7 +75,7 @@ class TestRouteFunction(unittest.TestCase):
 
     def test_route(self):
         bundle = Bundle(bundle_dir=bundle_dir)
-        test_model = TestModel(connection=ConnectionMockup(),
+        test_model = TestModel(connection=Mockup(),
                                bundle=bundle)
         routes = test_model.router.routes
         self.assertIn("/model/test/:id", routes)
@@ -90,7 +90,7 @@ class TestSanjiClass(unittest.TestCase):
 
     def setUp(self):
         self.bundle = Bundle(bundle_dir=bundle_dir)
-        self.test_model = TestModel(connection=ConnectionMockup(),
+        self.test_model = TestModel(connection=Mockup(),
                                     bundle=self.bundle)
 
     def tearDown(self):
@@ -100,14 +100,14 @@ class TestSanjiClass(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(BundleConfigError):
-            TestModel(connection=ConnectionMockup())
+            TestModel(connection=Mockup())
 
         with self.assertRaises(ValueError):
             TestModel()
 
         event = Event()
         bundle = Bundle(bundle_dir=bundle_dir)
-        tm = TestModel(bundle=bundle, connection=ConnectionMockup(),
+        tm = TestModel(bundle=bundle, connection=Mockup(),
                        stop_event=event)
         thread = Thread(target=tm.start)
         thread.daemon = True

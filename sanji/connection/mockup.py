@@ -21,7 +21,7 @@ class Object(object):
     pass
 
 
-class ConnectionMockup(Connection):
+class Mockup(Connection):
 
     def __init__(self):
         self.message_queue = Queue()
