@@ -156,7 +156,7 @@ class TestSanjiClass(unittest.TestCase):
         with self.assertRaises(Empty):
             self.test_model.req_queue.get(timeout=0.1)
 
-    def test__dispatch_message(self):
+    def test__dispatch_message(self):  # noqa
         queue = Queue()
         this = self
         # message1
@@ -202,10 +202,24 @@ class TestSanjiClass(unittest.TestCase):
             "resource": "/not_found/12345"
         })
 
+        def mock_handler_3(self, message, response):
+            raise Exception("Error")
+
+        self.test_model.router.get("/test_broken_response",
+                                   mock_handler_3)
+
+        # message4 - Not Found
+        message4 = Message({
+            "id": 3456,
+            "method": "get",
+            "resource": "/test_broken_response"
+        })
+
         # put messages in req_queue queue
         self.test_model.req_queue.put(message1)
         self.test_model.req_queue.put(message2)
         self.test_model.req_queue.put(message3)
+        self.test_model.req_queue.put(message4)
 
         # start dispatch messages
         event = Event()

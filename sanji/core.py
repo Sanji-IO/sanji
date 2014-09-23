@@ -109,10 +109,16 @@ class Sanji(object):
                 resp(code=404, data={"message": error_msg})
                 continue
 
-            for result in results:  # same route
-                resp = self.publish.create_response(result["message"])
-                map(lambda cb: cb(self, result["message"], resp),
-                    result["callbacks"])
+            try:
+                for result in results:  # same route
+                    resp = self.publish.create_response(result["message"])
+                    map(lambda cb: cb(self, result["message"], resp),
+                        result["callbacks"])
+            except Exception as e:
+                logger.warning(e)
+                resp = self.publish.create_response(message)
+                resp(code=500, data={"message": "Internal Error."})
+
         logger.debug("_dispatch_message thread is terminated")
 
     def _resolve_responses(self, stop_event):
