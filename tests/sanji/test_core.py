@@ -64,6 +64,9 @@ class TestModel(Sanji):
     def put2(self, message, response):
         pass
 
+    def before_stop(self):
+        pass
+
     def run(self):
         pass
 
