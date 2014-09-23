@@ -102,6 +102,16 @@ class TestSanjiClass(unittest.TestCase):
         with self.assertRaises(ValueError):
             TestModel()
 
+        event = Event()
+        bundle = Bundle(bundle_dir=bundle_dir)
+        tm = TestModel(bundle=bundle, connection=ConnectionMockup(),
+                       stop_event=event)
+        thread = Thread(target=tm.start)
+        thread.daemon = True
+        thread.start()
+        thread.join(0.2)
+        event.set()
+
     def test_on_publish(self):
         self.test_model.on_publish(None, None, 1)
 
@@ -202,24 +212,10 @@ class TestSanjiClass(unittest.TestCase):
             "resource": "/not_found/12345"
         })
 
-        def mock_handler_3(self, message, response):
-            raise Exception("Error")
-
-        self.test_model.router.get("/test_broken_response",
-                                   mock_handler_3)
-
-        # message4 - Not Found
-        message4 = Message({
-            "id": 3456,
-            "method": "get",
-            "resource": "/test_broken_response"
-        })
-
         # put messages in req_queue queue
         self.test_model.req_queue.put(message1)
         self.test_model.req_queue.put(message2)
         self.test_model.req_queue.put(message3)
-        self.test_model.req_queue.put(message4)
 
         # start dispatch messages
         event = Event()
@@ -245,6 +241,38 @@ class TestSanjiClass(unittest.TestCase):
             index = queue.get()
             self.assertLess(current_index, index)
             current_index = index
+
+        # check internal error response
+        def mock_handler_3(self, message, response):
+            raise Exception("Error")
+
+        self.test_model.router.get("/test_broken_response",
+                                   mock_handler_3)
+
+        # message4 - Not Found
+        message4 = Message({
+            "id": 1234,
+            "method": "get",
+            "resource": "/test_broken_response"
+        })
+        self.test_model.req_queue.put(message4)
+        # start dispatch messages
+        event = Event()
+        thread = Thread(target=self.test_model._dispatch_message,
+                        args=(event,))
+        thread.daemon = True
+        thread.start()
+        thread.join(0.5)
+        # let response onthefly
+        for session in self.test_model._session.session_list.itervalues():
+            session["status"] = Status.SENT
+            session["is_published"].set()
+
+        while self.test_model.req_queue.empty() is False:
+            pass
+
+        event.set()
+        thread.join()
 
     def test__resolve_responses(self):
         # prepare messages

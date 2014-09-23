@@ -105,18 +105,21 @@ class Sanji(object):
                 error_msg = "Route '%s' not found." % message.resource
                 logger.info(error_msg)
                 logger.debug(message.to_json())
-                resp = self.publish.create_response(message)
+                resp = self.publish.create_response(
+                    message, self.bundle.profile["name"])
                 resp(code=404, data={"message": error_msg})
                 continue
 
             try:
                 for result in results:  # same route
-                    resp = self.publish.create_response(result["message"])
+                    resp = self.publish.create_response(
+                        result["message"], self.bundle.profile["name"])
                     map(lambda cb: cb(self, result["message"], resp),
                         result["callbacks"])
             except Exception as e:
                 logger.warning(e)
-                resp = self.publish.create_response(message)
+                resp = self.publish.create_response(
+                    message, self.bundle.profile["name"])
                 resp(code=500, data={"message": "Internal Error."})
 
         logger.debug("_dispatch_message thread is terminated")
