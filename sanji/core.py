@@ -327,6 +327,12 @@ def Route(resource=None, methods=None):
     """
     def _route(func):
         def wrapper(self, *args, **kwargs):
+            # "test" argument means no wrap func this time,
+            # return original func immediately.
+            if kwargs.get("test", False):
+                kwargs.pop("test")
+                func(self, *args, **kwargs)
+
             _methods = methods
             if isinstance(methods, str):
                 _methods = [methods]
