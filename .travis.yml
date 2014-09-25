@@ -4,3 +4,7 @@ python:
 install:
   - pip install .
 script: nosetests
+notifications:
+  slack:
+    rooms:
+      - sys:yeTvjm0bw1tX6MBWrfkVL5RG#travis
