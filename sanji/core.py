@@ -33,9 +33,16 @@ class Sanji(object):
     """
     This is for sanji framework.
     """
-    def __init__(self, bundle=None, connection=None, stop_event=Event()):
+    def __init__(self, *args, **kwargs):
+
+        # Setup default options
+        bundle = kwargs.get("bundle", None)
+        connection = kwargs.get("connection", None)
+        stop_event = kwargs.get("stop_event", Event())
+
         if connection is None:
             raise ValueError("Connection is required.")
+
         # Model-related
         bundle_dir = os.path.dirname(inspect.getfile(self.__class__))
         if bundle is None:
@@ -78,7 +85,7 @@ class Sanji(object):
 
         # Custom init function
         logger.debug("Custom init start")
-        self.init()
+        self.init(*args, **kwargs)
         logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
@@ -234,7 +241,7 @@ class Sanji(object):
             thread.join()
         self.is_ready.clear()
 
-    def init(self):
+    def init(self, *args, **kwargs):
         """
         This is for user implement
         """

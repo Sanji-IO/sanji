@@ -70,6 +70,9 @@ class TestModel(Sanji):
     def run(self):
         pass
 
+    def init(self, *args, **kwargs):
+        self.test_variable = kwargs.get("test_variable", None)
+
 
 class TestRouteFunction(unittest.TestCase):
 
@@ -108,7 +111,11 @@ class TestSanjiClass(unittest.TestCase):
         event = Event()
         bundle = Bundle(bundle_dir=bundle_dir)
         tm = TestModel(bundle=bundle, connection=Mockup(),
-                       stop_event=event)
+                       stop_event=event, test_variable=True)
+
+        # bypassing test_variable to init()
+        self.assertTrue(tm.test_variable)
+
         thread = Thread(target=tm.start)
         thread.daemon = True
         thread.start()
