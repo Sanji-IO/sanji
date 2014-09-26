@@ -84,9 +84,11 @@ class Sanji(object):
         self._register_routes(methods)
 
         # Custom init function
-        logger.debug("Custom init start")
-        self.init(*args, **kwargs)
-        logger.debug("Custom init finish")
+        if hasattr(self, 'init') and \
+           hasattr(self.init, '__call__'):
+            logger.debug("Custom init start")
+            self.init(*args, **kwargs)
+            logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
         """
@@ -240,12 +242,6 @@ class Sanji(object):
         for thread, event in self.dispatch_thread_list:
             thread.join()
         self.is_ready.clear()
-
-    def init(self, *args, **kwargs):
-        """
-        This is for user implement
-        """
-        pass
 
     def on_message(self, client, userdata, msg):
         """This function will recevie all message from mqtt

@@ -64,6 +64,10 @@ class TestModel(Sanji):
     def put2(self, message, response):
         pass
 
+    @Route(resource="/mockup_resource", methods="get")
+    def mockup_handler(self, message, response):
+        response(message)
+
     def before_stop(self):
         pass
 
@@ -87,6 +91,11 @@ class TestRouteFunction(unittest.TestCase):
         self.assertEqual(1, len(routes["/model"].handlers))
         self.assertIn("/model/:id", routes)
         self.assertEqual(3, len(routes["/model/:id"].handlers))
+
+        # while test=True don't warp function
+        def resp(test):
+            self.assertTrue(test)
+        test_model.mockup_handler(True, resp, test=True)
 
 
 class TestSanjiClass(unittest.TestCase):
