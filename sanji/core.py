@@ -12,8 +12,10 @@ import logging
 import signal
 import sys
 import os
+import threading
 from threading import Event
 from threading import Thread
+from time import sleep
 
 from sanji.message import Message
 from sanji.message import MessageType
@@ -66,8 +68,9 @@ class Sanji(object):
         # Publisher
         self.publish = Publish(self._conn, self._session)
 
-        # Register signal to call stop()
-        signal.signal(signal.SIGINT, self.exit)
+        # Register signal to call stop() (only mainthread could do this)
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            signal.signal(signal.SIGINT, self.exit)
 
         # Auto-register routes
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
@@ -96,8 +99,9 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.req_queue.get(timeout=0.1)
+                message = self.req_queue.get_nowait()
             except Empty:
+                sleep(0.1)
                 continue
 
             results = self.router.dispatch(message)
@@ -130,8 +134,9 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.res_queue.get(timeout=0.1)
+                message = self.res_queue.get_nowait()
             except Empty:
+                sleep(0.1)
                 continue
             session = self._session.resolve(message.id, message)
             if session is None:
@@ -189,9 +194,12 @@ class Sanji(object):
         self.main_thread.daemon = True
         self.main_thread.start()
 
-        # control this bundle stop or not
-        while not self.stop_event.wait(0.1):
-            pass
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            # control this bundle stop or not
+            while not self.stop_event.wait(1):
+                sleep(1)
+        else:
+            self.stop_event.wait()
 
         self.stop()
         logger.debug("Shutdown successfully")

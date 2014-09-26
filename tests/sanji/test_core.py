@@ -353,7 +353,7 @@ class TestSanjiClass(unittest.TestCase):
         for msg_id in self.test_model._session.session_list:
             msg.id = msg_id
             self.test_model.res_queue.put(msg)
-
+        self.test_model.stop_event.set()
         thread.join(1)
         self.assertFalse(thread.is_alive())
 
