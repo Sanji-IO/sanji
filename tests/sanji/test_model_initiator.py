@@ -46,19 +46,11 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         self.assertEquals(self.model_initaitor.model_name, self.model_name)
 
-    def test_mkdir(self):
-        """
-        " It Should generate a data folder.
-        """
-        result = self.model_initaitor.mkdir()
-        self.assertTrue(result)
-        self.assertTrue(os.path.exists(self.model_db_folder))
-
     def test_create_db(self):
         """
         " It should generate a factory db.
         """
-        self.model_initaitor.mkdir()
+        os.makedirs(self.model_db_folder)
         try:
             with open(self.model_factory_db, 'a'):
                 os.utime(self.model_factory_db, None)
