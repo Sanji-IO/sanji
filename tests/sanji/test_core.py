@@ -247,7 +247,7 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         # let response onthefly
         for session in self.test_model._session.session_list.itervalues():
             session["status"] = Status.SENT
@@ -286,7 +286,7 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         # let response onthefly
         for session in self.test_model._session.session_list.itervalues():
             session["status"] = Status.SENT
@@ -366,12 +366,12 @@ class TestSanjiClass(unittest.TestCase):
         thread = Thread(target=self.test_model.start)
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         with self.test_model._session.session_lock:
             for msg_id in self.test_model._session.session_list:
                 del_msg.id = msg_id
             self.test_model._Sanji__resolve_responses(del_msg)
-        thread.join(0.001)
+        thread.join(0.01)
         with self.test_model._session.session_lock:
             for msg_id in self.test_model._session.session_list:
                 msg.id = msg_id
@@ -428,7 +428,7 @@ class TestSanjiClass(unittest.TestCase):
         thread = Thread(target=self.test_model.register, args=(reg_data,))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg)
         thread.join()
         self.assertFalse(thread.is_alive())
@@ -438,9 +438,9 @@ class TestSanjiClass(unittest.TestCase):
                         args=(reg_data, True, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg)
         thread.join()
         self.assertFalse(thread.is_alive())
@@ -450,7 +450,7 @@ class TestSanjiClass(unittest.TestCase):
                         args=(reg_data, False))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
         thread.join()
         self.assertFalse(thread.is_alive())
@@ -460,11 +460,11 @@ class TestSanjiClass(unittest.TestCase):
                         args=(reg_data, 2, 0, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
         thread.join()
         self.assertFalse(thread.is_alive())
@@ -490,7 +490,7 @@ class TestSanjiClass(unittest.TestCase):
                             exception_class=TypeError)
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
         thread.join()
         self.assertFalse(thread.is_alive())
@@ -500,7 +500,7 @@ class TestSanjiClass(unittest.TestCase):
                             args=(reg_data, 0, 0, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.001)
+        thread.join(0.01)
         self.test_model._Sanji__resolve_responses(msg_failed)
         thread.join()
         self.assertFalse(thread.is_alive())
