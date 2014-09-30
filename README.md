@@ -1,4 +1,4 @@
-Sanji [![Build Status](https://travis-ci.org/Sanji-IO/sanji.svg)](https://travis-ci.org/Sanji-IO/sanji)
+Sanji [![Build Status](https://travis-ci.org/Sanji-IO/sanji.svg)](https://travis-ci.org/Sanji-IO/sanji) [![Coverage Status](https://img.shields.io/coveralls/Sanji-IO/sanji.svg)](https://coveralls.io/r/Sanji-IO/sanji)
 =====
 
 
