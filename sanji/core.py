@@ -109,33 +109,34 @@ class Sanji(object):
         while not stop_event.is_set():
             try:
                 message = self.req_queue.get_nowait()
+                self.__dispatch_message(message)
             except Empty:
                 sleep(0.1)
-                continue
-
-            results = self.router.dispatch(message)
-            if len(results) == 0:
-                error_msg = "Route '%s' not found." % message.resource
-                logger.info(error_msg)
-                logger.debug(message.to_json())
-                resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=404, data={"message": error_msg})
-                continue
-
-            try:
-                for result in results:  # same route
-                    resp = self.publish.create_response(
-                        result["message"], self.bundle.profile["name"])
-                    map(lambda cb: cb(self, result["message"], resp),
-                        result["callbacks"])
-            except Exception as e:
-                logger.warning(e)
-                resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=500, data={"message": "Internal Error."})
-
         logger.debug("_dispatch_message thread is terminated")
+
+    def __dispatch_message(self, message):
+        results = self.router.dispatch(message)
+        if len(results) == 0:
+            error_msg = "Route '%s' not found." % message.resource
+            logger.info(error_msg)
+            logger.debug(message.to_json())
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
+            resp(code=404, data={"message": error_msg})
+            return
+
+        try:
+            for result in results:  # same route
+                resp = self.publish.create_response(
+                    result["message"], self.bundle.profile["name"])
+                print result["callbacks"]
+                map(lambda cb: cb(self, result["message"], resp),
+                    result["callbacks"])
+        except Exception as e:
+            logger.warning(e)
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
+            resp(code=500, data={"message": "Internal Error."})
 
     def _resolve_responses(self, stop_event):
         """
@@ -144,13 +145,15 @@ class Sanji(object):
         while not stop_event.is_set():
             try:
                 message = self.res_queue.get_nowait()
+                self.__resolve_responses(message)
             except Empty:
                 sleep(0.1)
-                continue
-            session = self._session.resolve(message.id, message)
-            if session is None:
-                logger.debug("Unknow response. Not for me.")
         logger.debug("_resolve_responses thread is terminated")
+
+    def __resolve_responses(self, message):
+        session = self._session.resolve(message.id, message)
+        if session is None:
+            logger.debug("Unknow response. Not for me.")
 
     def on_publish(self, client, userdata, mid):
         with self._session.session_lock:
