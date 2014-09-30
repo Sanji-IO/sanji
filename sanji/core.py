@@ -12,8 +12,10 @@ import logging
 import signal
 import sys
 import os
+import threading
 from threading import Event
 from threading import Thread
+from time import sleep
 
 from sanji.message import Message
 from sanji.message import MessageType
@@ -31,9 +33,16 @@ class Sanji(object):
     """
     This is for sanji framework.
     """
-    def __init__(self, bundle=None, connection=None, stop_event=Event()):
+    def __init__(self, *args, **kwargs):
+
+        # Setup default options
+        bundle = kwargs.get("bundle", None)
+        connection = kwargs.get("connection", None)
+        stop_event = kwargs.get("stop_event", Event())
+
         if connection is None:
             raise ValueError("Connection is required.")
+
         # Model-related
         bundle_dir = os.path.dirname(inspect.getfile(self.__class__))
         if bundle is None:
@@ -66,17 +75,20 @@ class Sanji(object):
         # Publisher
         self.publish = Publish(self._conn, self._session)
 
-        # Register signal to call stop()
-        signal.signal(signal.SIGINT, self.exit)
+        # Register signal to call stop() (only mainthread could do this)
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            signal.signal(signal.SIGINT, self.exit)
 
         # Auto-register routes
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         self._register_routes(methods)
 
         # Custom init function
-        logger.debug("Custom init start")
-        self.init()
-        logger.debug("Custom init finish")
+        if hasattr(self, 'init') and \
+           hasattr(self.init, '__call__'):
+            logger.debug("Custom init start")
+            self.init(*args, **kwargs)
+            logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
         """
@@ -96,33 +108,35 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.req_queue.get(timeout=0.1)
+                message = self.req_queue.get_nowait()
+                self.__dispatch_message(message)
             except Empty:
-                continue
-
-            results = self.router.dispatch(message)
-            if len(results) == 0:
-                error_msg = "Route '%s' not found." % message.resource
-                logger.info(error_msg)
-                logger.debug(message.to_json())
-                resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=404, data={"message": error_msg})
-                continue
-
-            try:
-                for result in results:  # same route
-                    resp = self.publish.create_response(
-                        result["message"], self.bundle.profile["name"])
-                    map(lambda cb: cb(self, result["message"], resp),
-                        result["callbacks"])
-            except Exception as e:
-                logger.warning(e)
-                resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=500, data={"message": "Internal Error."})
-
+                sleep(0.1)
         logger.debug("_dispatch_message thread is terminated")
+
+    def __dispatch_message(self, message):
+        results = self.router.dispatch(message)
+        if len(results) == 0:
+            error_msg = "Route '%s' not found." % message.resource
+            logger.info(error_msg)
+            logger.debug(message.to_json())
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
+            resp(code=404, data={"message": error_msg})
+            return
+
+        try:
+            for result in results:  # same route
+                resp = self.publish.create_response(
+                    result["message"], self.bundle.profile["name"])
+                print result["callbacks"]
+                map(lambda cb: cb(self, result["message"], resp),
+                    result["callbacks"])
+        except Exception as e:
+            logger.warning(e)
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
+            resp(code=500, data={"message": "Internal Error."})
 
     def _resolve_responses(self, stop_event):
         """
@@ -130,13 +144,16 @@ class Sanji(object):
         """
         while not stop_event.is_set():
             try:
-                message = self.res_queue.get(timeout=0.1)
+                message = self.res_queue.get_nowait()
+                self.__resolve_responses(message)
             except Empty:
-                continue
-            session = self._session.resolve(message.id, message)
-            if session is None:
-                logger.debug("Unknow response. Not for me.")
+                sleep(0.1)
         logger.debug("_resolve_responses thread is terminated")
+
+    def __resolve_responses(self, message):
+        session = self._session.resolve(message.id, message)
+        if session is None:
+            logger.debug("Unknow response. Not for me.")
 
     def on_publish(self, client, userdata, mid):
         with self._session.session_lock:
@@ -189,9 +206,12 @@ class Sanji(object):
         self.main_thread.daemon = True
         self.main_thread.start()
 
-        # control this bundle stop or not
-        while not self.stop_event.wait(0.1):
-            pass
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            # control this bundle stop or not
+            while not self.stop_event.wait(1):
+                sleep(1)
+        else:
+            self.stop_event.wait()
 
         self.stop()
         logger.debug("Shutdown successfully")
@@ -225,12 +245,6 @@ class Sanji(object):
         for thread, event in self.dispatch_thread_list:
             thread.join()
         self.is_ready.clear()
-
-    def init(self):
-        """
-        This is for user implement
-        """
-        pass
 
     def on_message(self, client, userdata, msg):
         """This function will recevie all message from mqtt

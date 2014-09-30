@@ -68,9 +68,6 @@ class Mockup(Connection):
 
         self.on_connect(self, None, None, 0)
 
-        self.__t_onpublish.join(timeout=1)
-        self.__t_onmessage.join(timeout=0)
-
         return 0
 
     def disconnect(self):
@@ -94,7 +91,7 @@ class Mockup(Connection):
         self.on_connect = func
 
     def publish(self, **kwargs):
-        self.message_queue.put(json.dumps(kwargs))
+        # self.message_queue.put(json.dumps(kwargs))
         mid = randint(0, 65535)
         self._publish_lock.acquire()
         self.publish_onfly[mid] = kwargs

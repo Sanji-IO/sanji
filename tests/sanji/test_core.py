@@ -64,11 +64,18 @@ class TestModel(Sanji):
     def put2(self, message, response):
         pass
 
+    @Route(resource="/mockup_resource", methods="get")
+    def mockup_handler(self, message, response):
+        response(message)
+
     def before_stop(self):
         pass
 
     def run(self):
         pass
+
+    def init(self, *args, **kwargs):
+        self.test_variable = kwargs.get("test_variable", None)
 
 
 class TestRouteFunction(unittest.TestCase):
@@ -84,6 +91,11 @@ class TestRouteFunction(unittest.TestCase):
         self.assertEqual(1, len(routes["/model"].handlers))
         self.assertIn("/model/:id", routes)
         self.assertEqual(3, len(routes["/model/:id"].handlers))
+
+        # while test=True don't warp function
+        def resp(test):
+            self.assertTrue(test)
+        test_model.mockup_handler(True, resp, test=True)
 
 
 class TestSanjiClass(unittest.TestCase):
@@ -108,7 +120,11 @@ class TestSanjiClass(unittest.TestCase):
         event = Event()
         bundle = Bundle(bundle_dir=bundle_dir)
         tm = TestModel(bundle=bundle, connection=Mockup(),
-                       stop_event=event)
+                       stop_event=event, test_variable=True)
+
+        # bypassing test_variable to init()
+        self.assertTrue(tm.test_variable)
+
         thread = Thread(target=tm.start)
         thread.daemon = True
         thread.start()
@@ -170,6 +186,11 @@ class TestSanjiClass(unittest.TestCase):
             self.test_model.req_queue.get(timeout=0.1)
 
     def test__dispatch_message(self):  # noqa
+        self.test_model.conn_thread = Thread(
+            target=self.test_model._conn.connect)
+        self.test_model.conn_thread.daemon = True
+        self.test_model.conn_thread.start()
+
         queue = Queue()
         this = self
         # message1
@@ -226,7 +247,7 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
+        thread.join(0.01)
         # let response onthefly
         for session in self.test_model._session.session_list.itervalues():
             session["status"] = Status.SENT
@@ -265,7 +286,7 @@ class TestSanjiClass(unittest.TestCase):
                         args=(event,))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
+        thread.join(0.01)
         # let response onthefly
         for session in self.test_model._session.session_list.itervalues():
             session["status"] = Status.SENT
@@ -333,7 +354,7 @@ class TestSanjiClass(unittest.TestCase):
         })
 
         msg = Message({
-            "id": 1234,
+            "id": 2266,
             "code": 200,
             "method": "post",
             "resource": "/controller/registration",
@@ -345,21 +366,27 @@ class TestSanjiClass(unittest.TestCase):
         thread = Thread(target=self.test_model.start)
         thread.daemon = True
         thread.start()
-        thread.join(0.1)
-        for msg_id in self.test_model._session.session_list:
-            del_msg.id = msg_id
-            self.test_model.res_queue.put(del_msg)
-        thread.join(0.1)
-        for msg_id in self.test_model._session.session_list:
-            msg.id = msg_id
-            self.test_model.res_queue.put(msg)
-
-        thread.join(1)
+        thread.join(0.01)
+        with self.test_model._session.session_lock:
+            for msg_id in self.test_model._session.session_list:
+                del_msg.id = msg_id
+            self.test_model._Sanji__resolve_responses(del_msg)
+        thread.join(0.01)
+        with self.test_model._session.session_lock:
+            for msg_id in self.test_model._session.session_list:
+                msg.id = msg_id
+            self.test_model._Sanji__resolve_responses(msg)
+        self.test_model.stop_event.set()
+        thread.join()
         self.assertFalse(thread.is_alive())
 
     def test_register(self):
+        self.test_model.conn_thread = Thread(
+            target=self.test_model._conn.connect)
+        self.test_model.conn_thread.daemon = True
+        self.test_model.conn_thread.start()
+
         this = self
-        self.test_model._create_thread_pool()
         # prepare ressponse messages
         msg = Message({
             "id": 1234,
@@ -401,9 +428,9 @@ class TestSanjiClass(unittest.TestCase):
         thread = Thread(target=self.test_model.register, args=(reg_data,))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg)
-        thread.join(5)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
         # register with failed
@@ -411,11 +438,11 @@ class TestSanjiClass(unittest.TestCase):
                         args=(reg_data, True, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg)
-        thread.join(5)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
         # register with failed
@@ -423,23 +450,23 @@ class TestSanjiClass(unittest.TestCase):
                         args=(reg_data, False))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
         # register with failed and raise error
         thread = Thread(target=self.test_model.register,
-                        args=(reg_data, 2))
+                        args=(reg_data, 2, 0, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(1)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
         class ThreadTest(Thread):
@@ -463,17 +490,19 @@ class TestSanjiClass(unittest.TestCase):
                             exception_class=TypeError)
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
         # register with failed and raise error
         thread = ThreadTest(target=self.test_model.register,
-                            args=(reg_data, 0, 0, 0.1))
+                            args=(reg_data, 0, 0, 0))
         thread.daemon = True
         thread.start()
-        thread.join(0.5)
+        thread.join(0.01)
+        self.test_model._Sanji__resolve_responses(msg_failed)
+        thread.join()
         self.assertFalse(thread.is_alive())
 
     def get_profile(self):
@@ -488,6 +517,6 @@ class TestSanjiClass(unittest.TestCase):
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'
-    logging.basicConfig(level=20, format=FORMAT)
+    logging.basicConfig(level=0, format=FORMAT)
     logger = logging.getLogger('test')
     unittest.main()

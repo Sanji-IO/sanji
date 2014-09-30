@@ -172,9 +172,10 @@ class TestPublishClass(unittest.TestCase):
         map(lambda t: t.join(0.1), threads)
 
         self.assertEqual(len(self.session.session_list), len(messages))
-        for session in self.session.session_list.itervalues():
-            session["status"] = Status.SENT
-            session["is_published"].set()
+        with self.session.session_lock:
+            for session in self.session.session_list.itervalues():
+                session["status"] = Status.SENT
+                session["is_published"].set()
 
         for thread in threads:
             thread.join(0.5)
