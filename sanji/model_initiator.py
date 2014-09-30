@@ -20,19 +20,12 @@ class ModelInitiator(object):
             self.model_name + ".json"
         self.db_type = db_type
 
-    def mkdir(self):
-        """
-        "   Make a data folder for model
-        """
-
-        if not os.path.exists(self.data_folder_path):
-            os.makedirs(self.data_folder_path)
-
-        return True
+        self.create_db()
 
     def create_db(self):
         """
-        "   Create a db file for model.
+        "   Create a db file for model if there is no db.
+        "   User need to prepare thier own xxx.factory.json.
         """
         self.factory_json_db_path = self.model_path + "/data/" + \
             self.model_name + ".factory.json"
@@ -45,7 +38,7 @@ class ModelInitiator(object):
                     shutil.copy2(self.factory_json_db_path, self.json_db_path)
                     return True
                 else:
-                    print "NO: " + self.factory_json_db_path
+                    print "*** NO: " + self.factory_json_db_path
 
         return False
 
