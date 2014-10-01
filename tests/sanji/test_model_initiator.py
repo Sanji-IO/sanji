@@ -1,3 +1,4 @@
+import json
 import unittest
 import shutil
 import sys
@@ -48,11 +49,11 @@ class TestModelInitiatorClass(unittest.TestCase):
 
     def test_create_db(self):
         """
-        " It should generate a factory db.
+        " It should generate a factory db if there is no db.
         """
         os.makedirs(self.model_db_folder)
         try:
-            with open(self.model_factory_db, 'a'):
+            with open(self.model_factory_db, "a"):
                 os.utime(self.model_factory_db, None)
         except Exception:
             self.fail("Maybe there is no folder to create file.")
@@ -64,6 +65,30 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.db_type = "sql"
         result = self.model_initaitor.create_db()
         self.assertFalse(result)
+
+    def test_load_db(self):
+        """
+        " It should load json db as a dictionary.
+        """
+        self.model_initaitor.db = None
+        self.assertEqual(type(self.model_initaitor.db), type(None))
+        os.makedirs(self.model_db_folder)
+        self.model_initaitor.create_db()
+        try:
+            with open(self.model_factory_db, "a"):
+                os.utime(self.model_factory_db, None)
+        except Exception:
+            self.fail("Maybe there is no folder to create file.")
+
+        data = {}
+        data["enable"] = 1
+        with open(self.model_factory_db, "w") as fp:
+            json.dump(data, fp, indent=4)
+
+        shutil.copyfile(self.model_factory_db, self.model_db)
+        self.model_initaitor.load_db()
+        self.assertEqual(self.model_initaitor.db, data)
+
 
 if __name__ == "__main__":
     unittest.main()
