@@ -7,8 +7,6 @@ from mock import ANY
 import os
 import sys
 import unittest
-from time import sleep
-from threading import Thread
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -103,27 +101,21 @@ class TestPublishClass(unittest.TestCase):
                     generate_id=True)
         ]
 
-        def send_block(msg):
-            response = self.publish.create_response(msg, "this is sign")
-            response(500, {"ccc": "moxa best"})
+        def check_message(topic, qos, payload):
+            self.assertNotIn("query", payload)
+            self.assertNotIn("param", payload)
+            self.assertIn("sign", payload)
+            self.assertIn("code", payload)
+            self.assertIn("this is sign", payload["sign"])
 
-        threads = []
+        self.publish._wait_published = Mock(return_value=None)
+        self.conn.publish = check_message
         for message in messages:
-            thread = Thread(target=send_block, args=(message,))
-            thread.daemon = True
-            thread.start()
-            threads.append(thread)
-        map(lambda t: t.join(0.1), threads)
-
-        self.assertEqual(len(self.session.session_list), len(messages))
-        with self.session.session_lock:
-            for session in self.session.session_list.itervalues():
-                session["status"] = Status.SENT
-                session["is_published"].set()
-
-        for thread in threads:
-            thread.join(0.5)
-            self.assertFalse(thread.is_alive())
+            resp = self.publish.create_response(message, "this is sign")
+            resp(500, {"ccc": "moxa best"})
+            self.publish._wait_published.assert_called_once_with(
+                ANY, no_response=True)
+            self.publish._wait_published.reset_mock()
 
     def test__create_message(self):
         # input dict
