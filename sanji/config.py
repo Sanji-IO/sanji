@@ -1,5 +1,4 @@
 import collections
-import copy
 import json
 import subprocess
 
@@ -10,7 +9,7 @@ class VersionDict(collections.MutableMapping):
 
     def __init__(self, *args, **kwargs):
         self.store = dict()
-        #self.update(dict(*args, **kwargs))  # use the free update to set keys
+        # self.update(dict(*args, **kwargs))  # use the free update to set keys
         self.private_head = "private"
         self.public_head = "public"
 

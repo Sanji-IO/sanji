@@ -1,4 +1,4 @@
-#__test__ = False
+# __test__ = False
 
 import os
 import sys

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+from mock import Mock
+from mock import patch
 from Queue import Empty
 from Queue import Queue
 import os
@@ -124,12 +126,6 @@ class TestSanjiClass(unittest.TestCase):
 
         # bypassing test_variable to init()
         self.assertTrue(tm.test_variable)
-
-        thread = Thread(target=tm.start)
-        thread.daemon = True
-        thread.start()
-        thread.join(0.2)
-        event.set()
 
     def test_on_publish(self):
         self.test_model.on_publish(None, None, 1)
@@ -345,40 +341,15 @@ class TestSanjiClass(unittest.TestCase):
             self.assertLessEqual(previous._order, func._order)
 
     def test_start(self):
-        del_msg = Message({
-            "id": 2266,
-            "code": 200,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["controller"]
-        })
+        def run():
+            self.test_model.stop_event.set()
 
-        msg = Message({
-            "id": 2266,
-            "code": 200,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["controller"],
-            "data": {
-                "tunnel": "good_luck_sanji"
-            }
-        })
-        thread = Thread(target=self.test_model.start)
-        thread.daemon = True
-        thread.start()
-        thread.join(0.01)
-        with self.test_model._session.session_lock:
-            for msg_id in self.test_model._session.session_list:
-                del_msg.id = msg_id
-            self.test_model._Sanji__resolve_responses(del_msg)
-        thread.join(0.01)
-        with self.test_model._session.session_lock:
-            for msg_id in self.test_model._session.session_list:
-                msg.id = msg_id
-            self.test_model._Sanji__resolve_responses(msg)
-        self.test_model.stop_event.set()
-        thread.join()
-        self.assertFalse(thread.is_alive())
+        self.test_model._create_thread_pool = Mock()
+        self.test_model.is_ready.set()
+        self.test_model.deregister = Mock(return_value=True)
+        self.test_model.register = Mock(return_value=True)
+        self.test_model.run = run
+        self.test_model.start()
 
     def test_register(self):
         self.test_model.conn_thread = Thread(
@@ -505,6 +476,24 @@ class TestSanjiClass(unittest.TestCase):
         thread.join()
         self.assertFalse(thread.is_alive())
 
+    def test_deregister(self):
+        data = {
+            "name": self.test_model.bundle.profile["name"]
+        }
+
+        with patch("sanji.core.Retry") as Retry:
+            Retry.return_value = None
+            retry = False
+            timeout = 2
+            interval = 1
+            self.test_model.deregister(retry=retry, interval=interval,
+                                       timeout=timeout)
+            Retry.assert_called_once_with(
+                target=self.test_model.publish.direct.delete,
+                args=("/controller/registration", data,),
+                kwargs={"timeout": timeout},
+                options={"retry": retry, "interval": interval})
+
     def get_profile(self):
         """
         TODO: needs final controller registration spec to vaild this output
@@ -515,8 +504,14 @@ class TestSanjiClass(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.test_model.exit()
 
+    def test__create_thread_pool(self):
+        self.test_model._create_thread_pool()
+        self.assertEqual(self.test_model.dispatch_thread_count +
+                         self.test_model.resolve_thread_count,
+                         len(self.test_model.dispatch_thread_list))
+
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'
-    logging.basicConfig(level=0, format=FORMAT)
+    logging.basicConfig(level=20, format=FORMAT)
     logger = logging.getLogger('test')
     unittest.main()

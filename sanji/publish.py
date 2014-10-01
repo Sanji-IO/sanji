@@ -130,7 +130,7 @@ class Publish(object):
         return _response
 
 
-def Retry(target=None, args=None, kwargs=None,
+def Retry(target=None, args=[], kwargs={},
           options={"retry": True, "interval": 1}):
     """
     options
