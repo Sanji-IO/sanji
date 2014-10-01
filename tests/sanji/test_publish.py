@@ -1,8 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+from mock import patch
+from mock import Mock
+from mock import ANY
 import os
 import sys
 import unittest
-from time import sleep
-from threading import Thread
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -33,123 +37,61 @@ class TestPublishClass(unittest.TestCase):
         self.publish = None
 
     def test_crud(self):  # noqa
-        this = self
-        mids = []
-        this.index = 0
+        self.conn.publish = Mock(return_value=1)
+        self.session.create = Mock(return_value={})
 
-        def send(method, resouce, data, block):
-            mids.append(this.publish.__getattribute__(method)
-                        (resouce, data, block=block))
+        # CRUD: block
+        with patch("sanji.publish.Publish._wait_published") as _wait_published:
+            _wait_published.return_value = None
+            for method in ["get", "put", "post", "delete"]:
+                self.publish.__getattribute__(method)("/test/resource",
+                                                      {"test": method}, False)
+                self.conn.publish.assert_called_once_with(topic="/controller",
+                                                          qos=2,
+                                                          payload=ANY)
+                self.conn.publish.reset_mock()
+                self.session.create.assert_called_once_with(ANY, mid=1, age=60)
+                self.session.create.reset_mock()
 
-        threads = []
-        for method in ["get", "put", "post", "delete"]:
-            thread = Thread(target=send, args=(
-                method, "/test/resource", {"test": method}, False))
-            thread.daemon = True
-            thread.start()
-            threads.append(thread)
-        sleep(0.5)
-        for session in self.session.session_list.itervalues():
-            session["status"] = Status.SENT
-            session["is_resolved"].set()
-            session["is_published"].set()
+        # CRUD: non-block
+        with patch("sanji.publish.Publish._wait_resolved") as _wait_resolved:
+            # Normal case
+            _wait_resolved.return_value = None
+            for method in ["get", "put", "post", "delete"]:
+                self.publish.__getattribute__(method)("/test/resource",
+                                                      {"test": method}, True)
 
-        for thread in threads:
-            thread.join(1)
-            self.assertFalse(thread.is_alive())
+            # Timeout
+            _wait_resolved.side_effect = TimeoutError
+            for method in ["get", "put", "post", "delete"]:
+                with self.assertRaises(TimeoutError):
+                    self.publish.__getattribute__(method)("/test/resource",
+                                                          {"test": method},
+                                                          True, 0)
 
-        # CRUD - block
-        def send_block(message, data):
-            self.assertEqual(self.publish.get("/test/resource", message),
-                             data)
-
-        def send_timeout(message, data):
-            with self.assertRaises(TimeoutError):
-                print self.publish.put("/test/resource", message, timeout=0)
-            with self.assertRaises(TimeoutError):
-                self.publish.delete("/test/resource", message, timeout=-1)
-
-        def resolve_statuserror(message):
-            with self.assertRaises(StatusError):
-                self.publish.put("/", message, timeout=10)
-
-        message = Message({"test": "block"}, generate_id=True)
-        thread = Thread(target=send_block, args=(message, "block",))
-        thread.daemon = True
-        thread.start()
-        sleep(0.1)
-        self.session.resolve(message.id, "block")
-        thread.join(1)
-        self.assertFalse(thread.is_alive())
-
-        # CRUD - block timeout
-        message = Message({"test": "timeout"}, generate_id=True)
-        thread = Thread(target=send_timeout, args=(message, "timeout",))
-        thread.daemon = True
-        thread.start()
-        sleep(0.1)
-        # self.session.resolve(message.id, 1)
-        thread.join(1)
-        self.assertFalse(thread.is_alive())
-
-        # Resolve StatusError
-        message = Message({"test": "StatusError"}, generate_id=True)
-        thread = Thread(target=resolve_statuserror, args=(message,))
-        thread.daemon = True
-        thread.start()
-        sleep(0.1)
-        self.session.resolve(message.id, 1, 123)
-        thread.join(1)
-        self.assertFalse(thread.is_alive())
+            # StatusError
+            _wait_resolved.side_effect = StatusError
+            for method in ["get", "put", "post", "delete"]:
+                with self.assertRaises(StatusError):
+                    self.publish.__getattribute__(method)("/test/resource",
+                                                          {"test": method},
+                                                          True)
 
     def test_event(self):
-        # Resolve StatusError
-        def send_block():
+        with patch("sanji.publish.Publish._wait_published") as _wait_published:
+            _wait_published.return_value = None
             self.publish.event("/test/event2",
                                {"type": "notify2", "message": "hi"})
-        thread = Thread(target=send_block, args=())
-        thread.daemon = True
-        thread.start()
-        sleep(0.5)
-        self.assertEqual(len(self.session.session_list), 1)
-        for session in self.session.session_list.itervalues():
-            self.session.resolve_send(session["mid"])
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
-        self.assertEqual(len(self.session.session_list), 0)
+            _wait_published.assert_called_once_with(ANY, no_response=True)
 
     def test_direct(self):
-
-        def send_nonblock():
-            session = self.publish.direct.get("/test/direct1", {
-                                              "type": "direct1",
-                                              "message": "hi"},
-                                              block=False)
-            self.session.resolve(session["message"].id, None)
-        thread = Thread(target=send_nonblock, args=())
-        thread.daemon = True
-        thread.start()
-        sleep(0.5)
-        self.assertEqual(len(self.session.session_list), 1)
-        for session in self.session.session_list.itervalues():
-            session["status"] = Status.SENT
-            session["is_published"].set()
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
-
-        def send_block():
-            self.publish.direct.get("/test/direct2",
-                                    {"type": "direct2", "message": "hi"},
-                                    block=True)
-        thread = Thread(target=send_block, args=())
-        thread.daemon = True
-        thread.start()
-        sleep(0.5)
-        self.assertEqual(len(self.session.session_list), 1)
-        session = self.session.session_list.values()[0]
-        self.session.resolve(session["message"].id, session["mid"])
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
+        with patch("sanji.publish.Publish._wait_published") as _wait_published:
+            _wait_published.return_value = None
+            self.publish.direct.get("/test/direct1", {
+                                    "type": "direct1",
+                                    "message": "hi"},
+                                    block=False)
+            _wait_published.assert_called_once_with(ANY)
 
     def test_create_response(self):
 
@@ -159,27 +101,21 @@ class TestPublishClass(unittest.TestCase):
                     generate_id=True)
         ]
 
-        def send_block(msg):
-            response = self.publish.create_response(msg, "this is sign")
-            response(500, {"ccc": "moxa best"})
+        def check_message(topic, qos, payload):
+            self.assertNotIn("query", payload)
+            self.assertNotIn("param", payload)
+            self.assertIn("sign", payload)
+            self.assertIn("code", payload)
+            self.assertIn("this is sign", payload["sign"])
 
-        threads = []
+        self.publish._wait_published = Mock(return_value=None)
+        self.conn.publish = check_message
         for message in messages:
-            thread = Thread(target=send_block, args=(message,))
-            thread.daemon = True
-            thread.start()
-            threads.append(thread)
-        map(lambda t: t.join(0.1), threads)
-
-        self.assertEqual(len(self.session.session_list), len(messages))
-        with self.session.session_lock:
-            for session in self.session.session_list.itervalues():
-                session["status"] = Status.SENT
-                session["is_published"].set()
-
-        for thread in threads:
-            thread.join(0.5)
-            self.assertFalse(thread.is_alive())
+            resp = self.publish.create_response(message, "this is sign")
+            resp(500, {"ccc": "moxa best"})
+            self.publish._wait_published.assert_called_once_with(
+                ANY, no_response=True)
+            self.publish._wait_published.reset_mock()
 
     def test__create_message(self):
         # input dict
