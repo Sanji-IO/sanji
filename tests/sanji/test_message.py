@@ -220,6 +220,26 @@ class TestMessageClass(unittest.TestCase):
         route.get(get)
         self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
 
+        msg = {
+            "id": 123,
+            "method": "get",
+            "resource": "/model"
+        }
+
+        matched_msg = {
+            "_type": 2,
+            "resource": "/model",
+            "query": {},
+            "id": 123,
+            "param": {},
+            "method": "get"
+        }
+
+        sanjimsg = Message(msg)
+        route = Route("/model")
+        route.get(get)
+        self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
+
     def test_generate_id(self):
         msg = Message({})
         msg_id = msg.generate_id()
