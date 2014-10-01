@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 from mock import Mock
+from mock import patch
 from Queue import Empty
 from Queue import Queue
 import os
@@ -475,6 +476,24 @@ class TestSanjiClass(unittest.TestCase):
         thread.join()
         self.assertFalse(thread.is_alive())
 
+    def test_deregister(self):
+        data = {
+            "name": self.test_model.bundle.profile["name"]
+        }
+
+        with patch("sanji.core.Retry") as Retry:
+            Retry.return_value = None
+            retry = False
+            timeout = 2
+            interval = 1
+            self.test_model.deregister(retry=retry, interval=interval,
+                                       timeout=timeout)
+            Retry.assert_called_once_with(
+                target=self.test_model.publish.direct.delete,
+                args=("/controller/registration", data,),
+                kwargs={"timeout": timeout},
+                options={"retry": retry, "interval": interval})
+
     def get_profile(self):
         """
         TODO: needs final controller registration spec to vaild this output
@@ -484,6 +503,12 @@ class TestSanjiClass(unittest.TestCase):
     def test_exit(self):
         with self.assertRaises(SystemExit):
             self.test_model.exit()
+
+    def test__create_thread_pool(self):
+        self.test_model._create_thread_pool()
+        self.assertEqual(self.test_model.dispatch_thread_count +
+                         self.test_model.resolve_thread_count,
+                         len(self.test_model.dispatch_thread_list))
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'

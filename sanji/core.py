@@ -169,7 +169,7 @@ class Sanji(object):
             thread.start()
             self.dispatch_thread_list.append((thread, stop_event))
 
-        for _ in range(0, 1):
+        for _ in range(0, self.resolve_thread_count):
             stop_event = Event()
             thread = Thread(target=self._resolve_responses,
                             name="thread-%s" % _, args=(stop_event,))
@@ -321,10 +321,12 @@ class Sanji(object):
             "name": self.bundle.profile["name"]
         }
 
+        print "************************"
         Retry(target=self.publish.direct.delete,
               args=("/controller/registration", data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
+        print "************************"
         logger.info("Deregister successfully tunnel: %s" %
                     (self._conn.tunnel,))
 
