@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-from mock import patch
 from mock import Mock
 from Queue import Empty
 from Queue import Queue
