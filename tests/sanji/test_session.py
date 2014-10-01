@@ -4,7 +4,6 @@ import unittest
 from time import sleep
 from collections import deque
 from threading import Thread
-# from threading import Lock
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -29,7 +28,6 @@ class TestSessionClass(unittest.TestCase):
 
     def test_init(self):
         self.assertIsInstance(self.session.session_list, dict)
-        # self.assertIsInstance(self.session.session_lock, Lock)
         self.assertIsInstance(self.session.timeout_queue, deque)
         self.assertIsInstance(self.session.thread_aging, Thread)
 
@@ -83,17 +81,17 @@ class TestSessionClass(unittest.TestCase):
 
         # timeout (response)
         self.session.create(message1, age=0)
-        sleep(1)
+        self.session.thread_aging.join(1)
         try:
-            self.session.timeout_queue.pop()
+            print self.session.timeout_queue.pop()
         except Exception:
             self.fail("timeout_queue is not empty")
 
         # timeout (send)
-        self.session.create(message1, age=1)
+        self.session.create(message1, age=0)
         for session in self.session.session_list.itervalues():
             session["is_published"].set()
-        sleep(1)
+        self.session.thread_aging.join(1)
         try:
             self.session.timeout_queue.pop()
         except Exception:
