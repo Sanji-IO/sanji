@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import json
 import os
 import shutil
 
@@ -13,6 +14,7 @@ class ModelInitiator(object):
     def __init__(self, model_name, model_path, db_type="json"):
         self.model_name = model_name
         self.model_path = model_path
+        self.db = None
         self.data_folder_path = self.model_path + "/data"
         self.factory_json_db_path = self.model_path + "/data/" + \
             self.model_name + ".factory.json"
@@ -21,6 +23,7 @@ class ModelInitiator(object):
         self.db_type = db_type
 
         self.create_db()
+        self.load_db()
 
     def create_db(self):
         """
@@ -41,6 +44,16 @@ class ModelInitiator(object):
                     print "*** NO: " + self.factory_json_db_path
 
         return False
+
+    def load_db(self):
+        """
+        " Load json db as a dictionary.
+        """
+        try:
+            with open(self.json_db_path) as fp:
+                self.db = json.load(fp)
+        except Exception:
+            print "*** Open JSON DB error."
 
     def __del__(self):
         pass
