@@ -11,6 +11,7 @@ import unittest
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.publish import Publish
+    from sanji.publish import Retry
     from sanji.session import Session
     from sanji.session import TimeoutError
     from sanji.session import StatusError
@@ -21,6 +22,33 @@ except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
     exit(1)
+
+
+class TestFunctionClass(unittest.TestCase):
+
+    def test_retry(self):
+        # case 1: timeout
+        def target():
+            raise TimeoutError
+        Retry(target=target, options={"retry": False, "interval": 0})
+
+        # case 2: normal
+        msg = Message({})
+
+        def target2():
+            setattr(msg, "code", 200)
+            return msg
+        res = Retry(target=target2, options={"retry": False, "interval": 0})
+        self.assertEqual(res, msg)
+
+        # case 3: retry
+        msg = Message({})
+
+        def target2():
+            setattr(msg, "code", 500)
+            return msg
+        res = Retry(target=target2, options={"retry": 3, "interval": 0})
+        self.assertEqual(res, None)
 
 
 class TestPublishClass(unittest.TestCase):

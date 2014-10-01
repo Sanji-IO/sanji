@@ -124,22 +124,6 @@ class TestRouterClass(unittest.TestCase):
         def callback2():
             print "I am test callback2"
 
-        # self.router.get("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").get(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.post("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").post(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.put("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").put(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.delete("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").delete(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
     def test_dispatch(self):
         request = {
             "id": 3345678,
