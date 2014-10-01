@@ -321,12 +321,10 @@ class Sanji(object):
             "name": self.bundle.profile["name"]
         }
 
-        print "************************"
         Retry(target=self.publish.direct.delete,
               args=("/controller/registration", data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
-        print "************************"
         logger.info("Deregister successfully tunnel: %s" %
                     (self._conn.tunnel,))
 
