@@ -4,6 +4,8 @@ import shutil
 import sys
 import os
 
+from mock import patch
+
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.model_initiator import ModelInitiator
@@ -29,7 +31,11 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Prepare
         """
-        os.makedirs(self.model_path)
+        factory_data = {}
+        factory_data["name"] = "factory"
+        os.makedirs(self.model_db_folder)
+        with open(self.model_factory_db, "w") as fp:
+            json.dump(factory_data, fp, indent=4)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
 
     def tearDown(self):
@@ -51,6 +57,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " It should generate a factory db if there is no db.
         """
+        if os.path.exists(self.model_db_folder):
+            shutil.rmtree(self.model_db_folder)
         os.makedirs(self.model_db_folder)
         try:
             with open(self.model_factory_db, "a"):
@@ -72,7 +80,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         self.model_initaitor.db = None
         self.assertEqual(type(self.model_initaitor.db), type(None))
-        os.makedirs(self.model_db_folder)
         self.model_initaitor.create_db()
         try:
             with open(self.model_factory_db, "a"):
@@ -88,6 +95,17 @@ class TestModelInitiatorClass(unittest.TestCase):
         shutil.copyfile(self.model_factory_db, self.model_db)
         self.model_initaitor.load_db()
         self.assertEqual(self.model_initaitor.db, data)
+
+    def test_save_db(self):
+        self.model_initaitor.db = {}
+        self.model_initaitor.db["name"] = "John"
+        self.model_initaitor.db["age"] = 33
+        self.model_initaitor.save_db()
+        db_data = None
+        with open(self.model_db) as fp:
+            db_data = json.load(fp)
+
+        self.assertEqual(db_data, {"name": "John", "age": 33})
 
 
 if __name__ == "__main__":

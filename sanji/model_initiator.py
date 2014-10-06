@@ -4,6 +4,7 @@
 import json
 import os
 import shutil
+import subprocess
 
 
 class ModelInitiator(object):
@@ -54,6 +55,25 @@ class ModelInitiator(object):
                 self.db = json.load(fp)
         except Exception:
             print "*** Open JSON DB error."
+
+    def save_db(self):
+        """
+        " Save json db to file system.
+        """
+        try:
+            with open(self.json_db_path, "w") as fp:
+                json.dump(self.db, fp, indent=4)
+        except Exception:
+            print "*** Write JSON DB to file error."
+        else:
+            self.sync()
+
+    def sync(self):
+        """
+        " Call Linux 'sync' command to write data from RAM to flash.
+        """
+        cmd = "sync"
+        subprocess.call(cmd, shell=True)
 
     def __del__(self):
         pass
