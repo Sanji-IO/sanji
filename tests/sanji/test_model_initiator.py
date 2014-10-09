@@ -2,6 +2,7 @@ import json
 import unittest
 import shutil
 import sys
+import time
 import os
 
 from mock import patch
@@ -13,6 +14,34 @@ except ImportError:
     print "Please check the python PATH for import test module. (%s)" \
         % __file__
     exit(1)
+
+ERROR_STR = """Error removing %(path)s, %(error)s """
+
+
+def rmgeneric(path, __func__):
+    try:
+        __func__(path)
+        #print 'Removed ', path
+    except OSError, (errno, strerror):
+        print ERROR_STR % {'path': path, 'error': strerror}
+
+
+def removeall(path):
+
+    if not os.path.isdir(path):
+        return
+
+    files = os.listdir(path)
+
+    for x in files:
+        fullpath = os.path.join(path, x)
+        if os.path.isfile(fullpath):
+            f = os.remove
+            rmgeneric(fullpath, f)
+        elif os.path.isdir(fullpath):
+            removeall(fullpath)
+            f = os.rmdir
+            rmgeneric(fullpath, f)
 
 
 class TestModelInitiatorClass(unittest.TestCase):
@@ -35,7 +64,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         factory_data = {}
         factory_data["name"] = "factory"
-        os.makedirs(self.model_db_folder)
+        if not os.path.exists(self.model_db_folder):
+            os.makedirs(self.model_db_folder)
         with open(self.model_factory_db, "w") as fp:
             json.dump(factory_data, fp, indent=4)
         self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
@@ -44,8 +74,9 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Clean up
         """
+        time.sleep(1)
         if os.path.exists(self.model_path):
-            shutil.rmtree(self.model_path)
+            removeall(self.model_path)
 
         self.model_initaitor = None
 
@@ -79,7 +110,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.db_type = "sql"
         result = self.model_initaitor.create_db()
         self.assertFalse(result)
-
 
     def test_recover_db(self):
         # TODO

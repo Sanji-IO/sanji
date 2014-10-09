@@ -52,7 +52,7 @@ class ModelInitiator(object):
             self.load_db()
         except Exception as b:
             print "***", b
-            self.revocer_db(self.factory_json_db_path)
+            self.recover_db(self.factory_json_db_path)
 
     def create_db(self):
         """
