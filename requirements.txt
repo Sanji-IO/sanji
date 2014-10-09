@@ -1,3 +1,4 @@
 flake8
-paho-mqtt
 coveralls
+paho-mqtt
+voluptuous
