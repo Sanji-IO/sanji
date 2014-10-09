@@ -31,7 +31,7 @@ class Route(object):
         """
         create_handler_func
         """
-        def _handler(callback):
+        def _handler(callback, schema=None):
             """
             _handler
             """
@@ -43,6 +43,7 @@ class Route(object):
             self.handlers.append({
                 "method": method,
                 "callback": callback,
+                "schema": schema,
                 "reentrant": reentrant
             })
             return self
@@ -53,13 +54,13 @@ class Route(object):
         """
         dispatch
         """
-        callbacks = []
+        handlers = []
         for handler in self.handlers:
             if handler["method"] != message.method:
                 continue
 
-            callbacks.append(handler["callback"])
-        return callbacks
+            handlers.append(handler)
+        return handlers
 
     def get_methods(self):
         methods = set()
@@ -90,12 +91,12 @@ class Router(object):
         """
         create_route_func
         """
-        def _route(resource, handler):
+        def _route(resource, handler, schema=None):
             """
             _route
             """
             route = self.routes.get(resource, Route(resource))
-            route.__getattribute__(method)(handler)
+            route.__getattribute__(method)(handler, schema)
             self.routes.update({resource: route})
             return self
 
@@ -117,7 +118,7 @@ class Router(object):
                 continue
 
             results.append({
-                "callbacks": route_result,
+                "handlers": route_result,
                 "message": __message
             })
 

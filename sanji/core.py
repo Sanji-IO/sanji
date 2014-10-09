@@ -16,6 +16,7 @@ import threading
 from threading import Event
 from threading import Thread
 from time import sleep
+from voluptuous import MultipleInvalid
 
 from sanji.message import Message
 from sanji.message import MessageType
@@ -116,6 +117,7 @@ class Sanji(object):
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
+        # Request not found
         if len(results) == 0:
             error_msg = "Route '%s' not found." % message.resource
             logger.info(error_msg)
@@ -125,18 +127,26 @@ class Sanji(object):
             resp(code=404, data={"message": error_msg})
             return
 
+        def ___dispatch(handler, message, resp):
+            if handler["schema"] is not None:
+                handler["schema"](message.data)
+            handler["callback"](self, result["message"], resp)
+
         try:
             for result in results:  # same route
                 resp = self.publish.create_response(
                     result["message"], self.bundle.profile["name"])
-                print result["callbacks"]
-                map(lambda cb: cb(self, result["message"], resp),
-                    result["callbacks"])
+                map(lambda handler: ___dispatch(
+                    handler, result["message"], resp),
+                    result["handlers"])
         except Exception as e:
             logger.warning(e)
             resp = self.publish.create_response(
                 message, self.bundle.profile["name"])
-            resp(code=500, data={"message": "Internal Error."})
+            # if exception is belongs to schema error
+            if isinstance(e, MultipleInvalid):
+                return resp(code=400, data={"message": str(e)})
+            return resp(code=500, data={"message": "Internal Error."})
 
     def _resolve_responses(self, stop_event):
         """
@@ -310,7 +320,8 @@ class Sanji(object):
                      options={"retry": retry, "interval": interval})
         if resp is None:
             logger.error("Can\'t not register to controller")
-            sys.exit(1)
+            self.stop()
+            return
 
         self._conn.set_tunnel(resp.data["tunnel"])
         logger.info("Register successfully tunnel: %s"
@@ -335,7 +346,7 @@ class Sanji(object):
         return self.bundle.profile
 
 
-def Route(resource=None, methods=None):
+def Route(resource=None, methods=None, schema=None):
     """
     route
     """
@@ -352,12 +363,14 @@ def Route(resource=None, methods=None):
                 _methods = [methods]
             route = self.router.route(resource)
             for method in _methods:
-                getattr(route, method)(func)
+                getattr(route, method)(func, schema)
         # Ordered by declare sequence
         # http://stackoverflow.com/questions/4459531/how-to-read-class-attributes-in-the-same-order-as-declared
         f_locals = sys._getframe(1).f_locals
         _order = len([v for v in f_locals.itervalues()
-                     if hasattr(v, '__call__') and v.__name__ == "wrapper"])
+                     if hasattr(v, '__call__')
+                     and hasattr(v, '__name__')
+                     and v.__name__ == "wrapper"])
         wrapper.__dict__["_order"] = _order
         return wrapper
     return _route
