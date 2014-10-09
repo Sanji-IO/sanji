@@ -25,6 +25,8 @@ class TestModelInitiatorClass(unittest.TestCase):
     model_db_folder = "/tmp/sanji-sdk/tests/test_myself/data"
     model_factory_db = \
         "/tmp/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
+    model_backup_db = \
+        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.backup.json"
     model_db = "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json"
 
     def setUp(self):
@@ -53,6 +55,10 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         self.assertEquals(self.model_initaitor.model_name, self.model_name)
 
+    def test_db_manager(self):
+        # TODO
+        pass
+
     def test_create_db(self):
         """
         " It should generate a factory db if there is no db.
@@ -73,6 +79,15 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.db_type = "sql"
         result = self.model_initaitor.create_db()
         self.assertFalse(result)
+
+
+    def test_recover_db(self):
+        # TODO
+        pass
+
+    def test_backup_db(self):
+        # TODO
+        pass
 
     def test_load_db(self):
         """
@@ -107,6 +122,13 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
+    def test_periodic_backup_db(self):
+        # TODO
+        pass
+
+    def test_thread_backup_db(self):
+        # TODO
+        pass
 
 if __name__ == "__main__":
     unittest.main()
