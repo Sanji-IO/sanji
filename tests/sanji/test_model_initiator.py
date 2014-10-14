@@ -21,7 +21,6 @@ ERROR_STR = """Error removing %(path)s, %(error)s """
 def rmgeneric(path, __func__):
     try:
         __func__(path)
-        #print 'Removed ', path
     except OSError, (errno, strerror):
         print ERROR_STR % {'path': path, 'error': strerror}
 
@@ -111,7 +110,6 @@ class TestModelInitiatorClass(unittest.TestCase):
         " It should generate a factory db if there is no db.
         """
         if os.path.exists(self.model_db_folder):
-            #removeall(self.model_db_folder)
             shutil.rmtree(self.model_db_folder)
 
         os.makedirs(self.model_db_folder)
