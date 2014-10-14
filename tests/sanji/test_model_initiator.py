@@ -223,7 +223,12 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
-        # case 2: open with no file. (coverage)
+        # case 2: non dictionary type.
+        self.model_initaitor.db = "string type"
+        rc = self.model_initaitor.save_db()
+        self.assertFalse(rc)
+
+        # case 3: open with no file. (coverage)
         if os.path.exists(self.model_db_folder):
             shutil.rmtree(self.model_db_folder)
         self.model_initaitor.save_db()
