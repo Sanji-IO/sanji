@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import logging
 import json
 import os
 import shutil
@@ -9,6 +10,8 @@ import time
 from threading import Thread
 from threading import Event
 from threading import RLock
+
+logger = logging.getLogger()
 
 
 class ModelInitiator(object):
@@ -47,7 +50,7 @@ class ModelInitiator(object):
         try:
             self.load_db()
         except Exception as e:
-            print "***", e
+            logger.debug("*** %s" % str(e))
             try:
                 self.recover_db(self.backup_json_db_path)
             except Exception:
@@ -58,7 +61,7 @@ class ModelInitiator(object):
         try:
             self.load_db()
         except Exception as b:
-            print "***", b
+            logger.debug("*** %s" % str(b))
             self.recover_db(self.factory_json_db_path)
 
     def create_db(self):
@@ -74,7 +77,7 @@ class ModelInitiator(object):
                             self.factory_json_db_path, self.json_db_path)
                     return True
                 else:
-                    print "*** NO: " + self.factory_json_db_path
+                    logger.debug("*** NO: %s" % self.factory_json_db_path)
 
         return False
 
@@ -87,7 +90,7 @@ class ModelInitiator(object):
             try:
                 shutil.copy2(src_file, self.json_db_path)
             except IOError as e:
-                print "*** No %s file." % src_file
+                logger.debug("*** NO: %s file." % self.src_file)
                 raise e
 
     def backup_db(self):
@@ -99,7 +102,7 @@ class ModelInitiator(object):
                 try:
                     shutil.copy2(self.json_db_path, self.backup_json_db_path)
                 except OSError:
-                    print "*** No file to copy."
+                    logger.debug("*** No file to copy.")
 
     def load_db(self):
         """
@@ -109,7 +112,7 @@ class ModelInitiator(object):
             with open(self.json_db_path) as fp:
                 self.db = json.load(fp)
         except Exception as e:
-            print "*** Open JSON DB error."
+            logger.debug("*** Open JSON DB error.")
             raise e
 
     def save_db(self):
@@ -121,7 +124,8 @@ class ModelInitiator(object):
                 with open(self.json_db_path, "w") as fp:
                     json.dump(self.db, fp, indent=4)
             except Exception:
-                print "*** Write JSON DB to file error."
+                logger.debug("*** Write JSON DB to file error.")
+
             else:
                 self.sync()
 
@@ -149,7 +153,7 @@ class ModelInitiator(object):
         return t
 
     def thread_backup_db(self):
-        single_sleep_time = 3
+        single_sleep_time = 2
         sleep_count = self.backup_interval
         while not self._backup_thread_event.is_set():
             if sleep_count >= self.backup_interval:

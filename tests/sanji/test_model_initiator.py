@@ -1,3 +1,4 @@
+import logging
 import json
 import unittest
 import shutil
@@ -15,6 +16,8 @@ except ImportError:
         % __file__
     exit(1)
 
+logger = logging.getLogger()
+
 ERROR_STR = """Error removing %(path)s, %(error)s """
 
 
@@ -22,7 +25,7 @@ def rmgeneric(path, __func__):
     try:
         __func__(path)
     except OSError, (errno, strerror):
-        print ERROR_STR % {'path': path, 'error': strerror}
+        logger.debug(ERROR_STR % {'path': path, 'error': strerror})
 
 
 def removeall(path):
@@ -61,8 +64,7 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Prepare
         """
-        factory_data = {}
-        factory_data["name"] = "factory"
+        factory_data = {"name": "factory"}
         if not os.path.exists(self.model_db_folder):
             os.makedirs(self.model_db_folder)
         with open(self.model_factory_db, "w") as fp:
@@ -190,8 +192,7 @@ class TestModelInitiatorClass(unittest.TestCase):
             self.fail("Maybe there is no folder to create file.")
 
         # case 2: data
-        data = {}
-        data["enable"] = 1
+        data = {"enable": 1}
         with open(self.model_factory_db, "w") as fp:
             json.dump(data, fp, indent=4)
 
@@ -228,13 +229,13 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.model_initaitor.save_db()
 
     def test_periodic_backup_db(self):
-        self.model_initaitor.backup_interval = 0.001
+        self.model_initaitor.backup_interval = 0.0001
         self.model_initaitor.periodic_backup_db()
         # case 1: Check the file is exist.
         if os.path.exists(self.model_backup_db):
             os.remove(self.model_backup_db)
 
-        time.sleep(5)
+        time.sleep(3)
         self.assertTrue(os.path.exists(self.model_backup_db))
 
         # case 2: Check data of file.
