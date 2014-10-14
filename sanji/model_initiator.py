@@ -77,7 +77,8 @@ class ModelInitiator(object):
                             self.factory_json_db_path, self.json_db_path)
                     return True
                 else:
-                    logger.debug("*** NO: %s" % self.factory_json_db_path)
+                    logger.debug(
+                        "*** NO such file: %s" % self.factory_json_db_path)
 
         return False
 
@@ -90,7 +91,7 @@ class ModelInitiator(object):
             try:
                 shutil.copy2(src_file, self.json_db_path)
             except IOError as e:
-                logger.debug("*** NO: %s file." % self.src_file)
+                logger.debug("*** NO: %s file." % src_file)
                 raise e
 
     def backup_db(self):

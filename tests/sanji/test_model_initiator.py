@@ -122,10 +122,20 @@ class TestModelInitiatorClass(unittest.TestCase):
         except Exception:
             self.fail("Maybe there is no folder to create file.")
 
+        # case 1: general case
         result = self.model_initaitor.create_db()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db))
 
+        # case 2: no factory db
+        if os.path.exists(self.model_db):
+            os.remove(self.model_db)
+        if os.path.exists(self.model_factory_db):
+            os.remove(self.model_factory_db)
+        result = self.model_initaitor.create_db()
+        self.assertFalse(result)
+
+        # case 3: sql type
         self.db_type = "sql"
         result = self.model_initaitor.create_db()
         self.assertFalse(result)
@@ -160,6 +170,15 @@ class TestModelInitiatorClass(unittest.TestCase):
             db_data = json.load(fp)
 
         self.assertEqual(db_data, {"name": "factory"})
+
+        # case 5: no file
+        try:
+            self.assertRaises(
+                self.model_initaitor.recover_db("/tmp/1234555555.txt"))
+        except IOError:
+            pass
+        else:
+            self.fail("No file to load but pass.")
 
     def test_backup_db(self):
         """
