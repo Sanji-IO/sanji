@@ -68,35 +68,54 @@ class TestModelInitiatorClass(unittest.TestCase):
             os.makedirs(self.model_db_folder)
         with open(self.model_factory_db, "w") as fp:
             json.dump(factory_data, fp, indent=4)
-        self.model_initaitor = ModelInitiator(self.model_name, self.model_path)
+
+        self.model_initaitor = ModelInitiator(
+            self.model_name, self.model_path, backup_interval=-1)
 
     def tearDown(self):
         """
         " Clean up
         """
-        time.sleep(1)
         if os.path.exists(self.model_path):
-            removeall(self.model_path)
+            removeall(self.model_db_folder)
 
+        self.model_initaitor.stop_backup()
         self.model_initaitor = None
 
     def test_init(self):
         """
         " Test __init__()
         """
+        # case 1: check name
+        self.assertEquals(self.model_initaitor.model_name, self.model_name)
+
+        # case 2: thread
+        self.model_initaitor = None
+        self.model_initaitor = ModelInitiator(
+            self.model_name, self.model_path, backup_interval=1)
         self.assertEquals(self.model_initaitor.model_name, self.model_name)
 
     def test_db_manager(self):
-        # TODO
-        pass
+        with patch(
+                "sanji.model_initiator.ModelInitiator.create_db")as create_db:
+            create_db.return_value = 1
+            if os.path.exists(self.model_db):
+                os.remove(self.model_db)
+            self.model_initaitor = ModelInitiator(
+                self.model_name, self.model_path, backup_interval=-1)
+
+            self.assertTrue(os.path.exists(self.model_db))
 
     def test_create_db(self):
         """
         " It should generate a factory db if there is no db.
         """
         if os.path.exists(self.model_db_folder):
+            #removeall(self.model_db_folder)
             shutil.rmtree(self.model_db_folder)
+
         os.makedirs(self.model_db_folder)
+
         try:
             with open(self.model_factory_db, "a"):
                 os.utime(self.model_factory_db, None)
@@ -112,17 +131,57 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.assertFalse(result)
 
     def test_recover_db(self):
-        # TODO
-        pass
+        # case 1: Check file which restore from backup db
+        self.model_initaitor.db = {}
+        self.model_initaitor.db["name"] = "backup"
+        self.model_initaitor.db["type"] = "json"
+        self.model_initaitor.save_db()
+        self.model_initaitor.backup_db()
+        if os.path.exists(self.model_db):
+            os.remove(self.model_db)
+        self.assertFalse(os.path.exists(self.model_db))
+        self.model_initaitor.recover_db(self.model_backup_db)
+        self.assertTrue(os.path.exists(self.model_db))
+        # case 2: Check data which restore from backup db
+        with open(self.model_db) as fp:
+            db_data = json.load(fp)
+
+        self.assertEqual(db_data, {"name": "backup", "type": "json"})
+
+        # case 3: Check file which restore from factory db
+        if os.path.exists(self.model_db):
+            os.remove(self.model_db)
+        self.assertFalse(os.path.exists(self.model_db))
+        self.model_initaitor.recover_db(self.model_factory_db)
+        self.assertTrue(os.path.exists(self.model_db))
+
+        # case 4: Check data which restore from factory db
+        with open(self.model_db) as fp:
+            db_data = json.load(fp)
+
+        self.assertEqual(db_data, {"name": "factory"})
 
     def test_backup_db(self):
-        # TODO
-        pass
+        """
+        " Test backup db
+        """
+        if os.path.exists(self.model_backup_db):
+            os.remove(self.model_backup_db)
+        # case 1: Check file exist
+        self.model_initaitor.backup_db()
+        self.assertTrue(os.path.exists(self.model_backup_db))
+
+        # case 2: Check data
+        with open(self.model_backup_db) as fp:
+            db_data = json.load(fp)
+
+        self.assertEqual(db_data, {"name": "factory"})
 
     def test_load_db(self):
         """
         " It should load json db as a dictionary.
         """
+        # case 1: No folder
         self.model_initaitor.db = None
         self.assertEqual(type(self.model_initaitor.db), type(None))
         self.model_initaitor.create_db()
@@ -132,6 +191,7 @@ class TestModelInitiatorClass(unittest.TestCase):
         except Exception:
             self.fail("Maybe there is no folder to create file.")
 
+        # case 2: data
         data = {}
         data["enable"] = 1
         with open(self.model_factory_db, "w") as fp:
@@ -141,7 +201,19 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.model_initaitor.load_db()
         self.assertEqual(self.model_initaitor.db, data)
 
+        # case 3:
+        if os.path.exists(self.model_db):
+            os.remove(self.model_db)
+            try:
+                self.assertRaises(self.model_initaitor.load_db())
+            except Exception:
+                pass
+
     def test_save_db(self):
+        """
+        " Test save db
+        """
+        # case 1: data of saving
         self.model_initaitor.db = {}
         self.model_initaitor.db["name"] = "John"
         self.model_initaitor.db["age"] = 33
@@ -152,13 +224,26 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
-    def test_periodic_backup_db(self):
-        # TODO
-        pass
+        # case 2: open with no file. (coverage)
+        if os.path.exists(self.model_db_folder):
+            shutil.rmtree(self.model_db_folder)
+        self.model_initaitor.save_db()
 
-    def test_thread_backup_db(self):
-        # TODO
-        pass
+    def test_periodic_backup_db(self):
+        self.model_initaitor.backup_interval = 0.001
+        self.model_initaitor.periodic_backup_db()
+        # case 1: Check the file is exist.
+        if os.path.exists(self.model_backup_db):
+            os.remove(self.model_backup_db)
+
+        time.sleep(5)
+        self.assertTrue(os.path.exists(self.model_backup_db))
+
+        # case 2: Check data of file.
+        with open(self.model_backup_db) as fp:
+            db_data = json.load(fp)
+
+        self.assertEqual(db_data, {"name": "factory"})
 
 if __name__ == "__main__":
     unittest.main()
