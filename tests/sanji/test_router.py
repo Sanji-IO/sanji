@@ -153,6 +153,7 @@ class TestRouterClass(unittest.TestCase):
         self.router.post("/test/resource/", callback("post_no_id"))
         self.router.route("/test/resource/:id") \
             .get(callback("get")) \
+            .get(callback("get")) \
             .post(callback("post")) \
             .delete(callback("delete")) \
             .put(callback("put"))
@@ -161,7 +162,13 @@ class TestRouterClass(unittest.TestCase):
             request["method"] = method
             request_data["method"] = method
             result = self.router.dispatch(Message(request))
-            self.assertEqual(method, result[0]["callbacks"][0]())
+            print result
+            self.assertEqual(method, result[0]["handlers"][0]["callback"]())
+
+        request["method"] = "get"
+        request_data["method"] = "get"
+        result = self.router.dispatch(Message(request))
+        self.assertEqual(2, len(result[0]["handlers"]))
 
         request = {
             "id": 3345678,
@@ -171,7 +178,7 @@ class TestRouterClass(unittest.TestCase):
         }
 
         result = self.router.dispatch(Message(request))
-        self.assertEqual("post_no_id", result[0]["callbacks"][0]())
+        self.assertEqual("post_no_id", result[0]["handlers"][0]["callback"]())
 
         request = {
             "id": 698978,
@@ -182,7 +189,6 @@ class TestRouterClass(unittest.TestCase):
 
         result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
-        # test dispatch threading
 
     def test_get_routes(self):
         def func():
