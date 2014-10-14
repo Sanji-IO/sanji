@@ -40,7 +40,7 @@ class ModelInitiator(object):
         self._backup_thread = None
         self._backup_thread_event = Event()
         if self.backup_interval > 0:
-            self._backup_thread = self.periodic_backup_db()
+            self.start_backup()
 
     def db_manager(self):
         """
@@ -136,10 +136,17 @@ class ModelInitiator(object):
                 return True
 
     def start_backup(self):
-        if self._backup_thread.is_alive():
-            raise RuntimeError("Stop previous backup thread first.")
+        if self._backup_thread:
+            if self._backup_thread.is_alive():
+                raise RuntimeError("Stop previous backup thread first.")
 
-        self._backup_thread.start()
+            self._backup_thread.start()
+            return True
+        else:
+            self._backup_thread = Thread(target=self.thread_backup_db)
+            self._backup_thread.daemon = True
+            self._backup_thread.start()
+            return True
 
     def stop_backup(self):
         if self._backup_thread:
@@ -148,15 +155,6 @@ class ModelInitiator(object):
                 self._backup_thread.join()
                 return True
         return False
-
-    def periodic_backup_db(self):
-        """
-        " Fork a thread to backup db periodically.
-        """
-        t = Thread(target=self.thread_backup_db)
-        t.daemon = True
-        t.start()
-        return t
 
     def thread_backup_db(self):
         single_sleep_time = 2

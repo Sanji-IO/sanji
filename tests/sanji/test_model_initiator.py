@@ -253,14 +253,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.model_initiator.save_db()
 
     def test_start_backup(self):
-        pass
-
-    def test_stop_backup(self):
-        pass
-
-    def test_periodic_backup_db(self):
         self.model_initiator.backup_interval = 0.0001
-        self.model_initiator.periodic_backup_db()
+        self.model_initiator.start_backup()
         # case 1: Check the file is exist.
         if os.path.exists(self.model_backup_db):
             os.remove(self.model_backup_db)
@@ -273,6 +267,9 @@ class TestModelInitiatorClass(unittest.TestCase):
             db_data = json.load(fp)
 
         self.assertEqual(db_data, {"name": "factory"})
+
+    def test_stop_backup(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
