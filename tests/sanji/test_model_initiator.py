@@ -268,8 +268,32 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "factory"})
 
+        # case 3: start twice
+        try:
+            self.assertRaises(self.model_initiator.start_backup())
+        except RuntimeError:
+            pass
+        else:
+            self.fail("No exception raises.")
+
+        # case 4: restart with timeout
+        self.model_initiator.stop_backup(1)
+        time.sleep(3)
+        rc = self.model_initiator.start_backup()
+        self.assertTrue(rc)
+
+        # case 5: restart with timeout
+        self.model_initiator.stop_backup()
+        time.sleep(3)
+        rc = self.model_initiator.start_backup()
+        self.assertTrue(rc)
+
     def test_stop_backup(self):
-        pass
+        rc = self.model_initiator.stop_backup()
+        self.assertFalse(rc)
+        self.model_initiator.start_backup()
+        rc = self.model_initiator.stop_backup()
+        self.assertTrue(rc)
 
 if __name__ == "__main__":
     unittest.main()

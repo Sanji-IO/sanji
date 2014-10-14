@@ -37,7 +37,8 @@ class ModelInitiator(object):
         self.db_mutex = RLock()
         self.db_manager()
 
-        self._backup_thread = None
+        self._backup_thread = Thread(target=self.thread_backup_db)
+        self._backup_thread.daemon = True
         self._backup_thread_event = Event()
         if self.backup_interval > 0:
             self.start_backup()
@@ -136,24 +137,22 @@ class ModelInitiator(object):
                 return True
 
     def start_backup(self):
-        if self._backup_thread:
-            if self._backup_thread.is_alive():
-                raise RuntimeError("Stop previous backup thread first.")
+        if self._backup_thread.is_alive():
+            raise RuntimeError("Stop previous backup thread first.")
 
-            self._backup_thread.start()
-            return True
-        else:
-            self._backup_thread = Thread(target=self.thread_backup_db)
-            self._backup_thread.daemon = True
-            self._backup_thread.start()
-            return True
+        self._backup_thread = Thread(target=self.thread_backup_db)
+        self._backup_thread.daemon = True
+        self._backup_thread.start()
+        return True
 
-    def stop_backup(self):
-        if self._backup_thread:
-            if self._backup_thread.is_alive():
-                self._backup_thread_event.set()
+    def stop_backup(self, timeout=None):
+        if self._backup_thread.is_alive():
+            self._backup_thread_event.set()
+            if timeout:
+                self._backup_thread.join(timeout)
+            else:
                 self._backup_thread.join()
-                return True
+            return True
         return False
 
     def thread_backup_db(self):
