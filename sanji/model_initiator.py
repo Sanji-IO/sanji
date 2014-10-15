@@ -33,6 +33,7 @@ class ModelInitiator(object):
         self.json_db_path = self.model_path + "/data/" + \
             self.model_name + ".json"
         self.db_type = db_type
+        self.db_status = None
         self.backup_interval = backup_interval * 3600  # hour
         self.db_mutex = RLock()
         self.db_manager()
@@ -47,9 +48,9 @@ class ModelInitiator(object):
         """
         " Do series of DB operations.
         """
-        self.create_db()
+        rc_create = self.create_db()    # for first create
         try:
-            self.load_db()
+            self.load_db()  # load existing/factory
         except Exception as e:
             logger.debug("*** %s" % str(e))
             try:
@@ -57,13 +58,23 @@ class ModelInitiator(object):
             except Exception:
                 pass
         else:
+            if rc_create is True:
+                self.db_status = "factory"
+            else:
+                self.db_status = "existing"
             return True
 
         try:
-            self.load_db()
+            self.load_db()  # load backup
         except Exception as b:
             logger.debug("*** %s" % str(b))
             self.recover_db(self.factory_json_db_path)
+            self.load_db()  # load factory
+            self.db_status = "factory"
+        else:
+            self.db_status = "backup"
+        finally:
+            return True
 
     def create_db(self):
         """

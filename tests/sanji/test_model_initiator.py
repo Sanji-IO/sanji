@@ -97,6 +97,12 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.assertEquals(self.model_initiator.model_name, self.model_name)
 
     def test_db_manager(self):
+        # case 1: existing
+        self.model_initiator.save_db()
+        self.model_initiator.db_manager()
+        self.assertEqual(self.model_initiator.db_status, "existing")
+
+        # case 2: factory
         with patch(
                 "sanji.model_initiator.ModelInitiator.create_db")as create_db:
             create_db.return_value = 1
@@ -106,6 +112,19 @@ class TestModelInitiatorClass(unittest.TestCase):
                 self.model_name, self.model_path, backup_interval=-1)
 
             self.assertTrue(os.path.exists(self.model_db))
+            self.assertEqual(self.model_initiator.db_status, "factory")
+
+        # case 3: backup
+        with patch(
+                "sanji.model_initiator.ModelInitiator.create_db")as create_db:
+            create_db.return_value = 1
+            self.model_initiator.save_db()
+            self.model_initiator.backup_db()
+            if os.path.exists(self.model_db):
+                os.remove(self.model_db)
+            self.model_initiator.db_manager()
+            self.assertTrue(os.path.exists(self.model_db))
+            self.assertEqual(self.model_initiator.db_status, "backup")
 
     def test_create_db(self):
         """
@@ -269,12 +288,8 @@ class TestModelInitiatorClass(unittest.TestCase):
         self.assertEqual(db_data, {"name": "factory"})
 
         # case 3: start twice
-        try:
-            self.assertRaises(self.model_initiator.start_backup())
-        except RuntimeError:
-            pass
-        else:
-            self.fail("No exception raises.")
+        with self.assertRaises(RuntimeError):
+            self.model_initiator.start_backup()
 
         # case 4: restart with timeout
         self.model_initiator.stop_backup(1)
