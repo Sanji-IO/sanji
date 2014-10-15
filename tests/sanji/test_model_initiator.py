@@ -1,3 +1,4 @@
+import logging
 import json
 import unittest
 import shutil
@@ -15,6 +16,8 @@ except ImportError:
         % __file__
     exit(1)
 
+logger = logging.getLogger()
+
 ERROR_STR = """Error removing %(path)s, %(error)s """
 
 
@@ -22,7 +25,7 @@ def rmgeneric(path, __func__):
     try:
         __func__(path)
     except OSError, (errno, strerror):
-        print ERROR_STR % {'path': path, 'error': strerror}
+        logger.debug(ERROR_STR % {'path': path, 'error': strerror})
 
 
 def removeall(path):
@@ -61,14 +64,13 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Prepare
         """
-        factory_data = {}
-        factory_data["name"] = "factory"
+        factory_data = {"name": "factory"}
         if not os.path.exists(self.model_db_folder):
             os.makedirs(self.model_db_folder)
         with open(self.model_factory_db, "w") as fp:
             json.dump(factory_data, fp, indent=4)
 
-        self.model_initaitor = ModelInitiator(
+        self.model_initiator = ModelInitiator(
             self.model_name, self.model_path, backup_interval=-1)
 
     def tearDown(self):
@@ -78,32 +80,51 @@ class TestModelInitiatorClass(unittest.TestCase):
         if os.path.exists(self.model_path):
             removeall(self.model_db_folder)
 
-        self.model_initaitor.stop_backup()
-        self.model_initaitor = None
+        self.model_initiator.stop_backup()
+        self.model_initiator = None
 
     def test_init(self):
         """
         " Test __init__()
         """
         # case 1: check name
-        self.assertEquals(self.model_initaitor.model_name, self.model_name)
+        self.assertEquals(self.model_initiator.model_name, self.model_name)
 
         # case 2: thread
-        self.model_initaitor = None
-        self.model_initaitor = ModelInitiator(
+        self.model_initiator = None
+        self.model_initiator = ModelInitiator(
             self.model_name, self.model_path, backup_interval=1)
-        self.assertEquals(self.model_initaitor.model_name, self.model_name)
+        self.assertEquals(self.model_initiator.model_name, self.model_name)
 
     def test_db_manager(self):
+        # case 1: existing
+        self.model_initiator.save_db()
+        self.model_initiator.db_manager()
+        self.assertEqual(self.model_initiator.db_status, "existing")
+
+        # case 2: factory
         with patch(
                 "sanji.model_initiator.ModelInitiator.create_db")as create_db:
             create_db.return_value = 1
             if os.path.exists(self.model_db):
                 os.remove(self.model_db)
-            self.model_initaitor = ModelInitiator(
+            self.model_initiator = ModelInitiator(
                 self.model_name, self.model_path, backup_interval=-1)
 
             self.assertTrue(os.path.exists(self.model_db))
+            self.assertEqual(self.model_initiator.db_status, "factory")
+
+        # case 3: backup
+        with patch(
+                "sanji.model_initiator.ModelInitiator.create_db")as create_db:
+            create_db.return_value = 1
+            self.model_initiator.save_db()
+            self.model_initiator.backup_db()
+            if os.path.exists(self.model_db):
+                os.remove(self.model_db)
+            self.model_initiator.db_manager()
+            self.assertTrue(os.path.exists(self.model_db))
+            self.assertEqual(self.model_initiator.db_status, "backup")
 
     def test_create_db(self):
         """
@@ -120,25 +141,35 @@ class TestModelInitiatorClass(unittest.TestCase):
         except Exception:
             self.fail("Maybe there is no folder to create file.")
 
-        result = self.model_initaitor.create_db()
+        # case 1: general case
+        result = self.model_initiator.create_db()
         self.assertTrue(result)
         self.assertTrue(os.path.exists(self.model_db))
 
+        # case 2: no factory db
+        if os.path.exists(self.model_db):
+            os.remove(self.model_db)
+        if os.path.exists(self.model_factory_db):
+            os.remove(self.model_factory_db)
+        result = self.model_initiator.create_db()
+        self.assertFalse(result)
+
+        # case 3: sql type
         self.db_type = "sql"
-        result = self.model_initaitor.create_db()
+        result = self.model_initiator.create_db()
         self.assertFalse(result)
 
     def test_recover_db(self):
         # case 1: Check file which restore from backup db
-        self.model_initaitor.db = {}
-        self.model_initaitor.db["name"] = "backup"
-        self.model_initaitor.db["type"] = "json"
-        self.model_initaitor.save_db()
-        self.model_initaitor.backup_db()
+        self.model_initiator.db = {}
+        self.model_initiator.db["name"] = "backup"
+        self.model_initiator.db["type"] = "json"
+        self.model_initiator.save_db()
+        self.model_initiator.backup_db()
         if os.path.exists(self.model_db):
             os.remove(self.model_db)
         self.assertFalse(os.path.exists(self.model_db))
-        self.model_initaitor.recover_db(self.model_backup_db)
+        self.model_initiator.recover_db(self.model_backup_db)
         self.assertTrue(os.path.exists(self.model_db))
         # case 2: Check data which restore from backup db
         with open(self.model_db) as fp:
@@ -150,7 +181,7 @@ class TestModelInitiatorClass(unittest.TestCase):
         if os.path.exists(self.model_db):
             os.remove(self.model_db)
         self.assertFalse(os.path.exists(self.model_db))
-        self.model_initaitor.recover_db(self.model_factory_db)
+        self.model_initiator.recover_db(self.model_factory_db)
         self.assertTrue(os.path.exists(self.model_db))
 
         # case 4: Check data which restore from factory db
@@ -159,6 +190,15 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "factory"})
 
+        # case 5: no file
+        try:
+            self.assertRaises(
+                self.model_initiator.recover_db("/tmp/1234555555.txt"))
+        except IOError:
+            pass
+        else:
+            self.fail("No file to load but pass.")
+
     def test_backup_db(self):
         """
         " Test backup db
@@ -166,7 +206,7 @@ class TestModelInitiatorClass(unittest.TestCase):
         if os.path.exists(self.model_backup_db):
             os.remove(self.model_backup_db)
         # case 1: Check file exist
-        self.model_initaitor.backup_db()
+        self.model_initiator.backup_db()
         self.assertTrue(os.path.exists(self.model_backup_db))
 
         # case 2: Check data
@@ -180,9 +220,9 @@ class TestModelInitiatorClass(unittest.TestCase):
         " It should load json db as a dictionary.
         """
         # case 1: No folder
-        self.model_initaitor.db = None
-        self.assertEqual(type(self.model_initaitor.db), type(None))
-        self.model_initaitor.create_db()
+        self.model_initiator.db = None
+        self.assertEqual(type(self.model_initiator.db), type(None))
+        self.model_initiator.create_db()
         try:
             with open(self.model_factory_db, "a"):
                 os.utime(self.model_factory_db, None)
@@ -190,20 +230,19 @@ class TestModelInitiatorClass(unittest.TestCase):
             self.fail("Maybe there is no folder to create file.")
 
         # case 2: data
-        data = {}
-        data["enable"] = 1
+        data = {"enable": 1}
         with open(self.model_factory_db, "w") as fp:
             json.dump(data, fp, indent=4)
 
         shutil.copyfile(self.model_factory_db, self.model_db)
-        self.model_initaitor.load_db()
-        self.assertEqual(self.model_initaitor.db, data)
+        self.model_initiator.load_db()
+        self.assertEqual(self.model_initiator.db, data)
 
         # case 3:
         if os.path.exists(self.model_db):
             os.remove(self.model_db)
             try:
-                self.assertRaises(self.model_initaitor.load_db())
+                self.assertRaises(self.model_initiator.load_db())
             except Exception:
                 pass
 
@@ -212,29 +251,34 @@ class TestModelInitiatorClass(unittest.TestCase):
         " Test save db
         """
         # case 1: data of saving
-        self.model_initaitor.db = {}
-        self.model_initaitor.db["name"] = "John"
-        self.model_initaitor.db["age"] = 33
-        self.model_initaitor.save_db()
+        self.model_initiator.db = {}
+        self.model_initiator.db["name"] = "John"
+        self.model_initiator.db["age"] = 33
+        self.model_initiator.save_db()
         db_data = None
         with open(self.model_db) as fp:
             db_data = json.load(fp)
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
-        # case 2: open with no file. (coverage)
+        # case 2: non dictionary type.
+        self.model_initiator.db = "string type"
+        rc = self.model_initiator.save_db()
+        self.assertFalse(rc)
+
+        # case 3: open with no file. (coverage)
         if os.path.exists(self.model_db_folder):
             shutil.rmtree(self.model_db_folder)
-        self.model_initaitor.save_db()
+        self.model_initiator.save_db()
 
-    def test_periodic_backup_db(self):
-        self.model_initaitor.backup_interval = 0.001
-        self.model_initaitor.periodic_backup_db()
+    def test_start_backup(self):
+        self.model_initiator.backup_interval = 0.0001
+        self.model_initiator.start_backup()
         # case 1: Check the file is exist.
         if os.path.exists(self.model_backup_db):
             os.remove(self.model_backup_db)
 
-        time.sleep(5)
+        time.sleep(3)
         self.assertTrue(os.path.exists(self.model_backup_db))
 
         # case 2: Check data of file.
@@ -242,6 +286,29 @@ class TestModelInitiatorClass(unittest.TestCase):
             db_data = json.load(fp)
 
         self.assertEqual(db_data, {"name": "factory"})
+
+        # case 3: start twice
+        with self.assertRaises(RuntimeError):
+            self.model_initiator.start_backup()
+
+        # case 4: restart with timeout
+        self.model_initiator.stop_backup(1)
+        time.sleep(3)
+        rc = self.model_initiator.start_backup()
+        self.assertTrue(rc)
+
+        # case 5: restart with timeout
+        self.model_initiator.stop_backup()
+        time.sleep(3)
+        rc = self.model_initiator.start_backup()
+        self.assertTrue(rc)
+
+    def test_stop_backup(self):
+        rc = self.model_initiator.stop_backup()
+        self.assertFalse(rc)
+        self.model_initiator.start_backup()
+        rc = self.model_initiator.stop_backup()
+        self.assertTrue(rc)
 
 if __name__ == "__main__":
     unittest.main()

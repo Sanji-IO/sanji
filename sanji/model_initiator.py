@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import logging
 import json
 import os
 import shutil
@@ -9,6 +10,8 @@ import time
 from threading import Thread
 from threading import Event
 from threading import RLock
+
+logger = logging.getLogger()
 
 
 class ModelInitiator(object):
@@ -30,36 +33,48 @@ class ModelInitiator(object):
         self.json_db_path = self.model_path + "/data/" + \
             self.model_name + ".json"
         self.db_type = db_type
+        self.db_status = None
         self.backup_interval = backup_interval * 3600  # hour
         self.db_mutex = RLock()
         self.db_manager()
 
-        self._backup_thread = None
+        self._backup_thread = Thread(target=self.thread_backup_db)
+        self._backup_thread.daemon = True
         self._backup_thread_event = Event()
         if self.backup_interval > 0:
-            self._backup_thread = self.periodic_backup_db()
+            self.start_backup()
 
     def db_manager(self):
         """
         " Do series of DB operations.
         """
-        self.create_db()
+        rc_create = self.create_db()    # for first create
         try:
-            self.load_db()
+            self.load_db()  # load existing/factory
         except Exception as e:
-            print "***", e
+            logger.debug("*** %s" % str(e))
             try:
                 self.recover_db(self.backup_json_db_path)
             except Exception:
                 pass
         else:
+            if rc_create is True:
+                self.db_status = "factory"
+            else:
+                self.db_status = "existing"
             return True
 
         try:
-            self.load_db()
+            self.load_db()  # load backup
         except Exception as b:
-            print "***", b
+            logger.debug("*** %s" % str(b))
             self.recover_db(self.factory_json_db_path)
+            self.load_db()  # load factory
+            self.db_status = "factory"
+        else:
+            self.db_status = "backup"
+        finally:
+            return True
 
     def create_db(self):
         """
@@ -74,7 +89,8 @@ class ModelInitiator(object):
                             self.factory_json_db_path, self.json_db_path)
                     return True
                 else:
-                    print "*** NO: " + self.factory_json_db_path
+                    logger.debug(
+                        "*** NO such file: %s" % self.factory_json_db_path)
 
         return False
 
@@ -87,7 +103,7 @@ class ModelInitiator(object):
             try:
                 shutil.copy2(src_file, self.json_db_path)
             except IOError as e:
-                print "*** No %s file." % src_file
+                logger.debug("*** NO: %s file." % src_file)
                 raise e
 
     def backup_db(self):
@@ -99,7 +115,7 @@ class ModelInitiator(object):
                 try:
                     shutil.copy2(self.json_db_path, self.backup_json_db_path)
                 except OSError:
-                    print "*** No file to copy."
+                    logger.debug("*** No file to copy.")
 
     def load_db(self):
         """
@@ -109,7 +125,7 @@ class ModelInitiator(object):
             with open(self.json_db_path) as fp:
                 self.db = json.load(fp)
         except Exception as e:
-            print "*** Open JSON DB error."
+            logger.debug("*** Open JSON DB error.")
             raise e
 
     def save_db(self):
@@ -117,39 +133,41 @@ class ModelInitiator(object):
         " Save json db to file system.
         """
         with self.db_mutex:
+            if not isinstance(self.db, dict):
+                return False
             try:
                 with open(self.json_db_path, "w") as fp:
                     json.dump(self.db, fp, indent=4)
             except Exception:
-                print "*** Write JSON DB to file error."
+                # disk full or something.
+                logger.debug("*** Write JSON DB to file error.")
+                return False
+
             else:
                 self.sync()
+                return True
 
     def start_backup(self):
         if self._backup_thread.is_alive():
             raise RuntimeError("Stop previous backup thread first.")
 
+        self._backup_thread = Thread(target=self.thread_backup_db)
+        self._backup_thread.daemon = True
         self._backup_thread.start()
+        return True
 
-    def stop_backup(self):
-        if self._backup_thread:
-            if self._backup_thread.is_alive():
-                self._backup_thread_event.set()
+    def stop_backup(self, timeout=None):
+        if self._backup_thread.is_alive():
+            self._backup_thread_event.set()
+            if timeout:
+                self._backup_thread.join(timeout)
+            else:
                 self._backup_thread.join()
-                return True
+            return True
         return False
 
-    def periodic_backup_db(self):
-        """
-        " Fork a thread to backup db periodically.
-        """
-        t = Thread(target=self.thread_backup_db)
-        t.daemon = True
-        t.start()
-        return t
-
     def thread_backup_db(self):
-        single_sleep_time = 3
+        single_sleep_time = 2
         sleep_count = self.backup_interval
         while not self._backup_thread_event.is_set():
             if sleep_count >= self.backup_interval:
