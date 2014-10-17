@@ -13,6 +13,7 @@ import signal
 import sys
 import os
 import threading
+import re
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -341,8 +342,10 @@ class Sanji(object):
 
     def get_profile(self):
         self.bundle.profile["tunnel"] = self._conn.tunnel
-        self.bundle.profile["resources"] = [_["resource"] for _ in
-                                            self.bundle.profile["resources"]]
+        self.bundle.profile["resources"] = \
+            [re.sub(r":(\w+)", r"#", _["resource"])
+             for _ in self.bundle.profile["resources"]]
+
         return self.bundle.profile
 
 
