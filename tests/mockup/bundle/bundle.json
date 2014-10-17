@@ -15,6 +15,12 @@
     {
       "methods": "get",
       "resource": "/sanji/bundles"
+    },
+    {
+      "resource": "/sanji/test/:id"
+    },
+    {
+      "resource": "/sanji/test/:id/test"
     }
   ]
 }
