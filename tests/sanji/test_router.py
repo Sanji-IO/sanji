@@ -2,6 +2,9 @@ import unittest
 import sys
 import os
 
+from mock import Mock
+
+
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     import sanji.router as router
@@ -132,61 +135,35 @@ class TestRouterClass(unittest.TestCase):
             "data": {}
         }
 
-        request_data = {
-            "uri": "test/resource/112?aaa=bbb",
-            "method": "get",
-            "param": {
-                "id": "112"
-            },
-            "query": {
-                "aaa": "bbb"
-            },
-            "data": {}
-        }
-
-        def callback(method):
-            def _cb():
-                return method
-            return _cb
-
-        # for times in range(1, 3):
-        self.router.post("/test/resource/", callback("post_no_id"))
-        self.router.route("/test/resource/:id") \
-            .get(callback("get")) \
-            .get(callback("get")) \
-            .post(callback("post")) \
-            .delete(callback("delete")) \
-            .put(callback("put"))
-
-        for method in ["get", "post", "delete", "put"]:
-            request["method"] = method
-            request_data["method"] = method
-            result = self.router.dispatch(Message(request))
-            print result
-            self.assertEqual(method, result[0]["handlers"][0]["callback"]())
-
-        request["method"] = "get"
-        request_data["method"] = "get"
+        # case 1: normal
+        callback = Mock(return_value="case1")
+        self.router.post("/test/resource", callback)
+        request["resource"] = "/test/resource/"
+        request["method"] = "post"
         result = self.router.dispatch(Message(request))
-        self.assertEqual(2, len(result[0]["handlers"]))
+        self.assertEqual(1, len(result))
+        self.assertEqual(1, len(result[0]["handlers"]))
+        self.assertEqual(result[0]["handlers"][0]["callback"](), "case1")
+        callback.assert_called_once_with()
 
-        request = {
-            "id": 3345678,
-            "resource": "/test/resource/",
-            "method": "post",
-            "data": {}
-        }
-
+        # case 2: using route method
+        callback2 = Mock(return_value="case2")
+        self.router.route("/test/dunplicate").post(callback2)
+        self.router.route("/test/dunplicate/:id").post(callback2)
+        request["resource"] = "/test/dunplicate/1234"
         result = self.router.dispatch(Message(request))
-        self.assertEqual("post_no_id", result[0]["handlers"][0]["callback"]())
+        self.assertEqual(1, len(result))
+        self.assertEqual(1, len(result[0]["handlers"]))
+        self.assertEqual(result[0]["handlers"][0]["callback"](), "case2")
+        callback2.assert_called_once_with()
 
+        # case 3: not found
         request = {
             "id": 698978,
             "resource": "/test/resource/",
             "method": "get",
             "data": {}
         }
-
         result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
 
