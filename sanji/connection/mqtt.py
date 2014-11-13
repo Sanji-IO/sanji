@@ -22,14 +22,19 @@ logger = logging.getLogger()
 
 
 class Mqtt(Connection):
+
     """
     Mqtt
     """
-    def __init__(self, broker_ip="127.0.0.1", broker_port=1883,
-                 broker_keepalive=60):
+    def __init__(
+        self,
+        broker_host=os.getenv('BROKER_PORT_1883_TCP_ADDR', "localhost"),
+        broker_port=os.getenv('BROKER_PORT_1883_TCP_PORT', 1883),
+        broker_keepalive=60
+    ):
         # proerties
         self.tunnel = uuid.uuid4().hex
-        self.broker_ip = broker_ip
+        self.broker_host = broker_host
         self.broker_port = broker_port
         self.broker_keepalive = broker_keepalive
         self.client = mqtt.Client()
@@ -44,7 +49,7 @@ class Mqtt(Connection):
         """
         logger.debug("Start connecting to broker")
         #  TODO: if connect fails it will raise exception
-        self.client.connect(self.broker_ip, self.broker_port,
+        self.client.connect(self.broker_host, self.broker_port,
                             self.broker_keepalive)
         self.client.loop_forever()
 
