@@ -77,11 +77,11 @@ class TestModelInitiatorClass(unittest.TestCase):
         """
         " Clean up
         """
-        if os.path.exists(self.model_path):
-            removeall(self.model_db_folder)
-
         self.model_initiator.stop_backup()
         self.model_initiator = None
+
+        if os.path.exists(self.model_path):
+            removeall(self.model_db_folder)
 
     def test_init(self):
         """

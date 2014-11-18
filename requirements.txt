@@ -2,3 +2,5 @@ flake8
 coveralls
 paho-mqtt
 voluptuous
+nose
+mock

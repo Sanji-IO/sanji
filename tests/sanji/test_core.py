@@ -374,11 +374,15 @@ class TestSanjiClass(unittest.TestCase):
                 kwargs={"timeout": timeout},
                 options={"retry": retry, "interval": interval})
 
-    def get_profile(self):
+    def test_get_profile(self):
         """
         TODO: needs final controller registration spec to vaild this output
         """
-        self.test_model.get_model_profile()
+        # replace all :variable to "#"
+        # this is just for now, new controller should support "+"
+        profile = self.test_model.get_profile()
+        for resource in profile["resources"]:
+            self.assertEquals(resource.find(":"), -1)
 
     def test_exit(self):
         with self.assertRaises(SystemExit):
