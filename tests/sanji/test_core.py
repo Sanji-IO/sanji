@@ -291,16 +291,14 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.res_queue.put(msg)
 
         # start dispatch messages
-        event = Event()
-        thread = Thread(target=self.test_model._resolve_responses,
-                        args=(event,))
+        thread = Thread(target=self.test_model._resolve_responses)
         thread.daemon = True
         thread.start()
 
         while self.test_model.res_queue.empty() is False:
             pass
 
-        event.set()
+        self.test_model.res_queue.put(None)
         thread.join()
 
     def test_register_routes(self):

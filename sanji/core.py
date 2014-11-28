@@ -5,7 +5,6 @@
 This is s Sanji Onject
 """
 
-from Queue import Empty
 from Queue import Queue
 import inspect
 import logging
@@ -104,17 +103,16 @@ class Sanji(object):
 
         return methods
 
-    def _dispatch_message(self, stop_event):
+    def _dispatch_message(self):
         """
         _dispatch_message
         """
-        while not stop_event.is_set():
-            try:
-                message = self.req_queue.get_nowait()
-                self.__dispatch_message(message)
-            except Empty:
-                sleep(0.1)
-        logger.debug("_dispatch_message thread is terminated")
+        while True:
+            message = self.req_queue.get()
+            if message is None:
+                logger.debug("_dispatch_message thread is terminated")
+                return
+            self.__dispatch_message(message)
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
@@ -149,17 +147,16 @@ class Sanji(object):
                 return resp(code=400, data={"message": str(e)})
             return resp(code=500, data={"message": "Internal Error."})
 
-    def _resolve_responses(self, stop_event):
+    def _resolve_responses(self):
         """
         _resolve_responses
         """
-        while not stop_event.is_set():
-            try:
-                message = self.res_queue.get_nowait()
-                self.__resolve_responses(message)
-            except Empty:
-                sleep(0.1)
-        logger.debug("_resolve_responses thread is terminated")
+        while True:
+            message = self.res_queue.get()
+            if message is None:
+                logger.debug("_resolve_responses thread is terminated")
+                return
+            self.__resolve_responses(message)
 
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
@@ -171,22 +168,26 @@ class Sanji(object):
             self._session.resolve_send(mid)
 
     def _create_thread_pool(self):
+
+        def stop(queue):
+            def _stop():
+                queue.put(None)
+            return _stop
+
         # create a thread pool
         for _ in range(0, self.dispatch_thread_count):
-            stop_event = Event()
             thread = Thread(target=self._dispatch_message,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-dispatch-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.dispatch_thread_list.append((thread, stop(self.req_queue)))
 
         for _ in range(0, self.resolve_thread_count):
-            stop_event = Event()
             thread = Thread(target=self._resolve_responses,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-resolve-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.dispatch_thread_list.append((thread, stop(self.res_queue)))
 
         logger.debug("Thread pool is created")
 
@@ -251,8 +252,8 @@ class Sanji(object):
         self.stop_event.set()
 
         # TODO: shutdown all threads
-        for thread, event in self.dispatch_thread_list:
-            event.set()
+        for thread, stop in self.dispatch_thread_list:
+            stop()
         for thread, event in self.dispatch_thread_list:
             thread.join()
         self.is_ready.clear()
