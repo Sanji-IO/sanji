@@ -115,9 +115,8 @@ class Publish(object):
                 del message.query
             if hasattr(message, 'param'):
                 del message.param
-            if hasattr(message, 'sign'):
-                if isinstance(message.sign, list):
-                    message.sign.append(sign)
+            if hasattr(message, 'sign') and isinstance(message.sign, list):
+                message.sign.append(sign)
             else:
                 message.sign = [sign]
 
