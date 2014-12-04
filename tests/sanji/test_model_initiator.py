@@ -261,7 +261,7 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
-        # case 2: non dictionary type.
+        # case 2: non dictionary or array type.
         self.model_initiator.db = "string type"
         rc = self.model_initiator.save_db()
         self.assertFalse(rc)
