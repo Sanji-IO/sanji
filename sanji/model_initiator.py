@@ -133,15 +133,13 @@ class ModelInitiator(object):
         " Save json db to file system.
         """
         with self.db_mutex:
-            if not isinstance(self.db, dict):
-                return False
             try:
                 with open(self.json_db_path, "w") as fp:
                     json.dump(self.db, fp, indent=4)
-            except Exception:
+            except Exception as e:
                 # disk full or something.
                 logger.debug("*** Write JSON DB to file error.")
-                return False
+                raise e
 
             else:
                 self.sync()
