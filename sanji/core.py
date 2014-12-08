@@ -13,6 +13,7 @@ import sys
 import os
 import threading
 import re
+import copy
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -50,10 +51,11 @@ class Sanji(object):
             bundle = Bundle(bundle_dir=bundle_dir)
         self.bundle = bundle
         self.stop_event = stop_event
+        self.reg_thread = None
 
         # Router-related (Dispatch)
         self.router = Router()
-        self.dispatch_thread_count = 5
+        self.dispatch_thread_count = 3
         self.dispatch_thread_list = []
 
         # Response-related (Resolve)
@@ -206,8 +208,6 @@ class Sanji(object):
 
             # register model to controller...
             self.is_ready.wait()
-            self.deregister()
-            self.register(self.get_profile())
 
             if hasattr(self, 'run'):
                 logger.debug("Start running...")
@@ -300,7 +300,19 @@ class Sanji(object):
             the connection result
         """
         self._conn.set_tunnel(self._conn.tunnel)
-        self.is_ready.set()
+
+        def reg():
+            self.deregister()
+            self.register(self.get_profile())
+            self.is_ready.set()
+
+        if self.reg_thread is not None and self.reg_thread.is_alive():
+            self.reg_thread.join()
+
+        self.reg_thread = Thread(target=reg)
+        self.reg_thread.daemon = True
+        self.reg_thread.start()
+
         logger.debug("Connection established with result code %s" % rc)
 
     def register(self, reg_data, retry=True, interval=1, timeout=3):
@@ -326,6 +338,10 @@ class Sanji(object):
             return
 
         self._conn.set_tunnel(resp.data["tunnel"])
+        self.bundle.profile["currentTunnel"] = resp.data["tunnel"]
+        self.bundle.profile["regCount"] = \
+            self.bundle.profile.get("reg_count", 0) + 1
+
         logger.info("Register successfully tunnel: %s"
                     % (resp.data["tunnel"],))
 
@@ -342,12 +358,13 @@ class Sanji(object):
                     (self._conn.tunnel,))
 
     def get_profile(self):
-        self.bundle.profile["tunnel"] = self._conn.tunnel
-        self.bundle.profile["resources"] = \
+        profile = copy.deepcopy(self.bundle.profile)
+        profile["tunnel"] = self._conn.tunnel
+        profile["resources"] = \
             [re.sub(r":(\w+)", r"#", _["resource"])
              for _ in self.bundle.profile["resources"]]
 
-        return self.bundle.profile
+        return profile
 
 
 def Route(resource=None, methods=None, schema=None):
