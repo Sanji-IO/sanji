@@ -20,7 +20,7 @@ class TestFunctions(unittest.TestCase):
     def test_compile_resource(self):
         self.assertEqual(
             router.compile_resource('/abc/:id').pattern,
-            "^abc/(?P<id>\w+?)(\?(?P<querystring>.*))?$"
+            "^abc/(?P<id>[\w-]+?)(\?(?P<querystring>.*))?$"
         )
 
         self.assertEqual(
@@ -166,6 +166,18 @@ class TestRouterClass(unittest.TestCase):
         }
         result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
+
+    def test_dispatch_multi_params(self):
+        request = {
+            "id": 3345678,
+            "resource": "/multi_params/1_1/2-2",
+            "method": "post",
+            "data": {}
+        }
+        callback = Mock(return_value="test_dispatch_multi_params")
+        self.router.route("/multi_params/:id/:u_id").post(callback)
+        result = self.router.dispatch(Message(request))
+        self.assertEqual(1, len(result))
 
     def test_get_routes(self):
         def func():
