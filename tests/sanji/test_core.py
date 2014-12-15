@@ -376,8 +376,6 @@ class TestSanjiClass(unittest.TestCase):
         """
         TODO: needs final controller registration spec to vaild this output
         """
-        # replace all :variable to "#"
-        # this is just for now, new controller should support "+"
         profile = self.test_model.get_profile()
         for resource in profile["resources"]:
             self.assertEquals(resource.find(":"), -1)

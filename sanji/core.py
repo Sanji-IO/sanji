@@ -361,7 +361,7 @@ class Sanji(object):
         profile = copy.deepcopy(self.bundle.profile)
         profile["tunnel"] = self._conn.tunnel
         profile["resources"] = \
-            [re.sub(r":(\w+)", r"#", _["resource"])
+            [re.sub(r":(\w+)", r"+", _["resource"])
              for _ in self.bundle.profile["resources"]]
 
         return profile
