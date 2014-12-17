@@ -114,7 +114,7 @@ class ModelInitiator(object):
             if os.path.exists(self.json_db_path):
                 try:
                     shutil.copy2(self.json_db_path, self.backup_json_db_path)
-                except IOError:
+                except (IOError, OSError):
                     logger.debug("*** No file to copy.")
 
     def load_db(self):
