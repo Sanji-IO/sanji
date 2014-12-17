@@ -56,12 +56,11 @@ class Sanji(object):
         # Router-related (Dispatch)
         self.router = Router()
         self.dispatch_thread_count = 3
-        self.dispatch_thread_list = []
+        self.thread_list = []
 
         # Response-related (Resolve)
         self._session = Session()
         self.resolve_thread_count = 1
-        self.resolve_thread_list = []
 
         # Message Bus
         self._conn = connection
@@ -182,14 +181,14 @@ class Sanji(object):
                             name="thread-dispatch-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop(self.req_queue)))
+            self.thread_list.append((thread, stop(self.req_queue)))
 
         for _ in range(0, self.resolve_thread_count):
             thread = Thread(target=self._resolve_responses,
                             name="thread-resolve-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop(self.res_queue)))
+            self.thread_list.append((thread, stop(self.res_queue)))
 
         logger.debug("Thread pool is created")
 
@@ -252,9 +251,9 @@ class Sanji(object):
         self.stop_event.set()
 
         # TODO: shutdown all threads
-        for thread, stop in self.dispatch_thread_list:
+        for thread, stop in self.thread_list:
             stop()
-        for thread, event in self.dispatch_thread_list:
+        for thread, stop in self.thread_list:
             thread.join()
         self.is_ready.clear()
 
