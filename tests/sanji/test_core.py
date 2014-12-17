@@ -388,7 +388,7 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model._create_thread_pool()
         self.assertEqual(self.test_model.dispatch_thread_count +
                          self.test_model.resolve_thread_count,
-                         len(self.test_model.dispatch_thread_list))
+                         len(self.test_model.thread_list))
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'
