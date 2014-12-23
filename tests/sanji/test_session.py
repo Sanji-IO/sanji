@@ -1,9 +1,10 @@
 import os
 import sys
 import unittest
-from time import sleep
 from collections import deque
-from threading import Thread
+from mock import Mock
+from mock import MagicMock
+from mock import patch
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -19,7 +20,11 @@ except ImportError:
 
 class TestSessionClass(unittest.TestCase):
 
-    def setUp(self):
+    @patch("sanji.session.sleep")
+    @patch("sanji.session.Thread")
+    def setUp(self, Thread, sleep):
+        self.thread_mock = Thread.return_value = MagicMock()
+        self.thread_mock.is_alive.return_value = True
         self.session = Session()
 
     def tearDown(self):
@@ -29,7 +34,6 @@ class TestSessionClass(unittest.TestCase):
     def test_init(self):
         self.assertIsInstance(self.session.session_list, dict)
         self.assertIsInstance(self.session.timeout_queue, deque)
-        self.assertIsInstance(self.session.thread_aging, Thread)
 
     def test_resolve(self):
         message1 = Message({}, generate_id=True)
@@ -68,30 +72,42 @@ class TestSessionClass(unittest.TestCase):
         with self.assertRaises(SessionError):
             self.session.create(message3, force=False)
 
-        # aging should be test too
-        sleep(1)
-        self.assertLess(self.session.session_list[message1.id]["age"], 60)
-
-    def test_stop(self):
+    def test_stop_is_alive_false(self):
+        self.thread_mock.is_alive.return_value = False
         self.session.stop()
         self.assertFalse(self.session.thread_aging.is_alive())
+        self.assertFalse(self.thread_mock.join.called)
 
-    def test_aging(self):
+    def test_stop_is_alive_true(self):
+        self.thread_mock.is_alive.return_value = True
+        self.session.stop()
+        self.thread_mock.join.assert_called_once_with()
+
+    @patch("sanji.session.sleep")
+    def test_aging(self, sleep):
+        self.session.stop()
+
         message1 = Message({}, generate_id=True)
 
         # timeout (response)
         self.session.create(message1, age=0)
-        self.session.thread_aging.join(1)
+        m = self.session.stop_event = Mock()
+        conf = {"is_set.side_effect": [False, True, False, True]}
+        m.configure_mock(**conf)
+        self.session.aging()
+
         try:
-            print self.session.timeout_queue.pop()
+            self.session.timeout_queue.pop()
         except Exception:
-            self.fail("timeout_queue is not empty")
+            self.fail("timeout_queue is empty")
 
         # timeout (send)
         self.session.create(message1, age=0)
+        self.session.aging()
+
         for session in self.session.session_list.itervalues():
             session["is_published"].set()
-        self.session.thread_aging.join(1)
+
         try:
             self.session.timeout_queue.pop()
         except Exception:
