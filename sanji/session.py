@@ -55,7 +55,8 @@ class Session(object):
 
     def stop(self):
         self.stop_event.set()
-        self.thread_aging.join()
+        if self.thread_aging.is_alive():
+            self.thread_aging.join()
 
     def resolve(self, msg_id, message=None, status=Status.RESOLVED):
         with self.session_lock:
@@ -116,7 +117,6 @@ class Session(object):
                     # TODO: use system time diff to decrease age
                     #       instead of just - 1 ?
                     session["age"] = session["age"] - 0.5
-
                     # age > 0
                     if session["age"] > 0:
                         continue
