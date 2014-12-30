@@ -291,16 +291,14 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.res_queue.put(msg)
 
         # start dispatch messages
-        event = Event()
-        thread = Thread(target=self.test_model._resolve_responses,
-                        args=(event,))
+        thread = Thread(target=self.test_model._resolve_responses)
         thread.daemon = True
         thread.start()
 
         while self.test_model.res_queue.empty() is False:
             pass
 
-        event.set()
+        self.test_model.res_queue.put(None)
         thread.join()
 
     def test_register_routes(self):
@@ -378,8 +376,6 @@ class TestSanjiClass(unittest.TestCase):
         """
         TODO: needs final controller registration spec to vaild this output
         """
-        # replace all :variable to "#"
-        # this is just for now, new controller should support "+"
         profile = self.test_model.get_profile()
         for resource in profile["resources"]:
             self.assertEquals(resource.find(":"), -1)
@@ -392,7 +388,7 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model._create_thread_pool()
         self.assertEqual(self.test_model.dispatch_thread_count +
                          self.test_model.resolve_thread_count,
-                         len(self.test_model.dispatch_thread_list))
+                         len(self.test_model.thread_list))
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'

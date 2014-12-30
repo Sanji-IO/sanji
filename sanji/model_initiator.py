@@ -114,7 +114,7 @@ class ModelInitiator(object):
             if os.path.exists(self.json_db_path):
                 try:
                     shutil.copy2(self.json_db_path, self.backup_json_db_path)
-                except IOError:
+                except (IOError, OSError):
                     logger.debug("*** No file to copy.")
 
     def load_db(self):
@@ -133,6 +133,8 @@ class ModelInitiator(object):
         " Save json db to file system.
         """
         with self.db_mutex:
+            if not isinstance(self.db, dict) and not isinstance(self.db, list):
+                return False
             try:
                 with open(self.json_db_path, "w") as fp:
                     json.dump(self.db, fp, indent=4)

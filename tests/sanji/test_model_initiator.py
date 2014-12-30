@@ -3,10 +3,11 @@ import json
 import unittest
 import shutil
 import sys
-import time
 import os
 
 from mock import patch
+from mock import Mock
+from mock import MagicMock
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -261,12 +262,10 @@ class TestModelInitiatorClass(unittest.TestCase):
 
         self.assertEqual(db_data, {"name": "John", "age": 33})
 
-        '''
-        # case 2: non dictionary type.
+        # case 2: non dictionary or array type.
         self.model_initiator.db = "string type"
         rc = self.model_initiator.save_db()
         self.assertFalse(rc)
-        '''
 
         # case 3: open with no file. (coverage)
         if os.path.exists(self.model_db_folder):
@@ -277,37 +276,20 @@ class TestModelInitiatorClass(unittest.TestCase):
         except Exception:
             pass
 
-    def test_start_backup(self):
-        self.model_initiator.backup_interval = 0.0001
+    @patch("sanji.model_initiator.Thread")
+    def test_start_backup_thread_is_not_alive(self, Thread):
+        self.model_initiator._backup_thread.is_alive = Mock(return_value=False)
+        Thread.return_value = MagicMock(daemon=False, start=Mock())
         self.model_initiator.start_backup()
-        # case 1: Check the file is exist.
-        if os.path.exists(self.model_backup_db):
-            os.remove(self.model_backup_db)
+        self.assertTrue(self.model_initiator._backup_thread.daemon)
+        self.model_initiator._backup_thread.start.assert_called_once_with()
 
-        time.sleep(3)
-        self.assertTrue(os.path.exists(self.model_backup_db))
-
-        # case 2: Check data of file.
-        with open(self.model_backup_db) as fp:
-            db_data = json.load(fp)
-
-        self.assertEqual(db_data, {"name": "factory"})
-
-        # case 3: start twice
+    def test_start_backup_thread_is_alive(self):
         with self.assertRaises(RuntimeError):
+            self.model_initiator._backup_thread.is_alive =\
+                Mock(return_value=True)
             self.model_initiator.start_backup()
-
-        # case 4: restart with timeout
-        self.model_initiator.stop_backup(1)
-        time.sleep(3)
-        rc = self.model_initiator.start_backup()
-        self.assertTrue(rc)
-
-        # case 5: restart with timeout
-        self.model_initiator.stop_backup()
-        time.sleep(3)
-        rc = self.model_initiator.start_backup()
-        self.assertTrue(rc)
+        self.model_initiator.stop_backup = Mock()
 
     def test_stop_backup(self):
         rc = self.model_initiator.stop_backup()

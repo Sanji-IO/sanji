@@ -5,7 +5,6 @@
 This is s Sanji Onject
 """
 
-from Queue import Empty
 from Queue import Queue
 import inspect
 import logging
@@ -14,6 +13,7 @@ import sys
 import os
 import threading
 import re
+import copy
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -51,16 +51,16 @@ class Sanji(object):
             bundle = Bundle(bundle_dir=bundle_dir)
         self.bundle = bundle
         self.stop_event = stop_event
+        self.reg_thread = None
 
         # Router-related (Dispatch)
         self.router = Router()
-        self.dispatch_thread_count = 5
-        self.dispatch_thread_list = []
+        self.dispatch_thread_count = 3
+        self.thread_list = []
 
         # Response-related (Resolve)
         self._session = Session()
         self.resolve_thread_count = 1
-        self.resolve_thread_list = []
 
         # Message Bus
         self._conn = connection
@@ -104,17 +104,16 @@ class Sanji(object):
 
         return methods
 
-    def _dispatch_message(self, stop_event):
+    def _dispatch_message(self):
         """
         _dispatch_message
         """
-        while not stop_event.is_set():
-            try:
-                message = self.req_queue.get_nowait()
-                self.__dispatch_message(message)
-            except Empty:
-                sleep(0.1)
-        logger.debug("_dispatch_message thread is terminated")
+        while True:
+            message = self.req_queue.get()
+            if message is None:
+                logger.debug("_dispatch_message thread is terminated")
+                return
+            self.__dispatch_message(message)
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
@@ -149,17 +148,16 @@ class Sanji(object):
                 return resp(code=400, data={"message": str(e)})
             return resp(code=500, data={"message": "Internal Error."})
 
-    def _resolve_responses(self, stop_event):
+    def _resolve_responses(self):
         """
         _resolve_responses
         """
-        while not stop_event.is_set():
-            try:
-                message = self.res_queue.get_nowait()
-                self.__resolve_responses(message)
-            except Empty:
-                sleep(0.1)
-        logger.debug("_resolve_responses thread is terminated")
+        while True:
+            message = self.res_queue.get()
+            if message is None:
+                logger.debug("_resolve_responses thread is terminated")
+                return
+            self.__resolve_responses(message)
 
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
@@ -171,22 +169,26 @@ class Sanji(object):
             self._session.resolve_send(mid)
 
     def _create_thread_pool(self):
+
+        def stop(queue):
+            def _stop():
+                queue.put(None)
+            return _stop
+
         # create a thread pool
         for _ in range(0, self.dispatch_thread_count):
-            stop_event = Event()
             thread = Thread(target=self._dispatch_message,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-dispatch-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.thread_list.append((thread, stop(self.req_queue)))
 
         for _ in range(0, self.resolve_thread_count):
-            stop_event = Event()
             thread = Thread(target=self._resolve_responses,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-resolve-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.thread_list.append((thread, stop(self.res_queue)))
 
         logger.debug("Thread pool is created")
 
@@ -205,8 +207,6 @@ class Sanji(object):
 
             # register model to controller...
             self.is_ready.wait()
-            self.deregister()
-            self.register(self.get_profile())
 
             if hasattr(self, 'run'):
                 logger.debug("Start running...")
@@ -251,9 +251,9 @@ class Sanji(object):
         self.stop_event.set()
 
         # TODO: shutdown all threads
-        for thread, event in self.dispatch_thread_list:
-            event.set()
-        for thread, event in self.dispatch_thread_list:
+        for thread, stop in self.thread_list:
+            stop()
+        for thread, stop in self.thread_list:
             thread.join()
         self.is_ready.clear()
 
@@ -299,7 +299,19 @@ class Sanji(object):
             the connection result
         """
         self._conn.set_tunnel(self._conn.tunnel)
-        self.is_ready.set()
+
+        def reg():
+            self.deregister()
+            self.register(self.get_profile())
+            self.is_ready.set()
+
+        if self.reg_thread is not None and self.reg_thread.is_alive():
+            self.reg_thread.join()
+
+        self.reg_thread = Thread(target=reg)
+        self.reg_thread.daemon = True
+        self.reg_thread.start()
+
         logger.debug("Connection established with result code %s" % rc)
 
     def register(self, reg_data, retry=True, interval=1, timeout=3):
@@ -325,6 +337,10 @@ class Sanji(object):
             return
 
         self._conn.set_tunnel(resp.data["tunnel"])
+        self.bundle.profile["currentTunnel"] = resp.data["tunnel"]
+        self.bundle.profile["regCount"] = \
+            self.bundle.profile.get("reg_count", 0) + 1
+
         logger.info("Register successfully tunnel: %s"
                     % (resp.data["tunnel"],))
 
@@ -341,12 +357,13 @@ class Sanji(object):
                     (self._conn.tunnel,))
 
     def get_profile(self):
-        self.bundle.profile["tunnel"] = self._conn.tunnel
-        self.bundle.profile["resources"] = \
-            [re.sub(r":(\w+)", r"#", _["resource"])
+        profile = copy.deepcopy(self.bundle.profile)
+        profile["tunnel"] = self._conn.tunnel
+        profile["resources"] = \
+            [re.sub(r":(\w+)", r"+", _["resource"])
              for _ in self.bundle.profile["resources"]]
 
-        return self.bundle.profile
+        return profile
 
 
 def Route(resource=None, methods=None, schema=None):
