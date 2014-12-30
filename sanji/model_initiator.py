@@ -138,10 +138,10 @@ class ModelInitiator(object):
             try:
                 with open(self.json_db_path, "w") as fp:
                     json.dump(self.db, fp, indent=4)
-            except Exception:
+            except Exception as e:
                 # disk full or something.
                 logger.debug("*** Write JSON DB to file error.")
-                return False
+                raise e
 
             else:
                 self.sync()
