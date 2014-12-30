@@ -21,6 +21,10 @@
     },
     {
       "resource": "/sanji/test/:id/test"
+    },
+    {
+      "role": "view",
+      "resource": "/events"
     }
   ]
 }

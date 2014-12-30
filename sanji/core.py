@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-"""
-This is s Sanji Onject
-"""
-
-from Queue import Queue
 import inspect
 import logging
 import signal
@@ -14,6 +9,7 @@ import os
 import threading
 import re
 import copy
+from Queue import Queue
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -113,7 +109,28 @@ class Sanji(object):
             if message is None:
                 logger.debug("_dispatch_message thread is terminated")
                 return
-            self.__dispatch_message(message)
+
+            if message._type != MessageType.EVENT:
+                self.__dispatch_message(message)
+            elif message._type == MessageType.EVENT:
+                self.__dispatch_event_message(message)
+
+    def __dispatch_event_message(self, message):
+        results = self.router.dispatch(message)
+
+        def ___dispatch(handler, message):
+            args_len = len(inspect.getargspec(handler["callback"]).args)
+            if args_len == 2:
+                handler["callback"](self, result["message"])
+            else:
+                logger.debug("Route [event] callback's arguments must be" +
+                             "function(self, message)")
+        try:
+            for result in results:  # same route
+                map(lambda handler: ___dispatch(handler, result["message"]),
+                    result["handlers"])
+        except Exception as e:
+            logger.warning(e)
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
@@ -130,14 +147,20 @@ class Sanji(object):
         def ___dispatch(handler, message, resp):
             if handler["schema"] is not None:
                 handler["schema"](message.data)
-            handler["callback"](self, result["message"], resp)
+            args_len = len(inspect.getargspec(handler["callback"]).args)
+            if args_len == 3:
+                handler["callback"](self, result["message"], resp)
+            else:
+                logger.debug("Route callback's arguments must be" +
+                             "function(self, message, response)")
 
         try:
             for result in results:  # same route
                 resp = self.publish.create_response(
                     result["message"], self.bundle.profile["name"])
                 map(lambda handler: ___dispatch(
-                    handler, result["message"], resp),
+                    handler, result["message"], resp
+                    ),
                     result["handlers"])
         except Exception as e:
             logger.warning(e)
@@ -298,11 +321,12 @@ class Sanji(object):
         rc
             the connection result
         """
-        self._conn.set_tunnel(self._conn.tunnel)
+        self._conn.set_tunnels(self._conn.tunnels)
 
         def reg():
             self.deregister()
-            self.register(self.get_profile())
+            self.register(self.get_profile("model"))
+            self.register(self.get_profile("view"))
             self.is_ready.set()
 
         if self.reg_thread is not None and self.reg_thread.is_alive():
@@ -327,6 +351,11 @@ class Sanji(object):
             False if no success
             Tunnel if success
         """
+        if len(reg_data["resources"]) == 0:
+            logger.debug("%s no need to register due to no resources" %
+                         (reg_data["name"]))
+            return
+
         resp = Retry(target=self.publish.direct.post,
                      args=("/controller/registration", reg_data,),
                      kwargs={"timeout": timeout},
@@ -336,32 +365,41 @@ class Sanji(object):
             self.stop()
             return
 
-        self._conn.set_tunnel(resp.data["tunnel"])
-        self.bundle.profile["currentTunnel"] = resp.data["tunnel"]
+        self._conn.set_tunnel(reg_data["role"], resp.data["tunnel"])
+        self.bundle.profile["currentTunnels"] = self._conn.tunnels
         self.bundle.profile["regCount"] = \
             self.bundle.profile.get("reg_count", 0) + 1
 
-        logger.info("Register successfully tunnel: %s"
-                    % (resp.data["tunnel"],))
+        logger.info("Register successfully %s tunnel: %s"
+                    % (reg_data["name"], resp.data["tunnel"],))
 
     def deregister(self, retry=True, interval=1, timeout=3):
-        data = {
-            "name": self.bundle.profile["name"]
-        }
+        """
+        Deregister model/view of this bundle
+        """
+        def _deregister(role):
+            data = {"name": "%s-%s" % (self.bundle.profile["name"], role,)}
+            Retry(target=self.publish.direct.delete,
+                  args=("/controller/registration", data,),
+                  kwargs={"timeout": timeout},
+                  options={"retry": retry, "interval": interval})
+            logger.info("Deregister successfully %s tunnel: %s" %
+                        (data["name"], self._conn.tunnels[role],))
 
-        Retry(target=self.publish.direct.delete,
-              args=("/controller/registration", data,),
-              kwargs={"timeout": timeout},
-              options={"retry": retry, "interval": interval})
-        logger.info("Deregister successfully tunnel: %s" %
-                    (self._conn.tunnel,))
+        _deregister("model")
+        _deregister("view")
 
-    def get_profile(self):
+    def get_profile(self, role="model"):
         profile = copy.deepcopy(self.bundle.profile)
-        profile["tunnel"] = self._conn.tunnel
-        profile["resources"] = \
-            [re.sub(r":(\w+)", r"+", _["resource"])
-             for _ in self.bundle.profile["resources"]]
+        profile["tunnel"] = self._conn.tunnels["internel"]
+        profile["role"] = role
+        profile["resources"] = []
+        profile["name"] = "%s-%s" % (profile["name"], role,)
+
+        for _ in self.bundle.profile["resources"]:
+            if _.get("role", "model") != role:
+                continue
+            profile["resources"].append(re.sub(r":(\w+)", r"+", _["resource"]))
 
         return profile
 

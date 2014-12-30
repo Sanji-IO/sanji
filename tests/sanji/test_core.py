@@ -4,6 +4,7 @@
 from mock import Mock
 from mock import patch
 from mock import ANY
+from mock import call
 from Queue import Empty
 import os
 import sys
@@ -107,7 +108,8 @@ class TestRouteFunction(unittest.TestCase):
 
 class TestSanjiClass(unittest.TestCase):
 
-    def setUp(self):
+    @patch("sanji.session.Thread")
+    def setUp(self, Thread):
         self.bundle = Bundle(bundle_dir=bundle_dir)
         self.test_model = TestModel(connection=Mockup(),
                                     bundle=self.bundle)
@@ -346,19 +348,30 @@ class TestSanjiClass(unittest.TestCase):
                     "tunnel": 1234
                 }
             })
-            self.test_model.register(None)
-            set_tunnel.assert_called_once_with(1234)
+            reg_data = {
+                "name": "test_register",
+                "role": "model",
+                "resources": ["/abc"]
+            }
+            self.test_model.register(reg_data)
+            set_tunnel.assert_called_once_with("model", 1234)
 
         # case 2: register failed call stop
             Retry.return_value = None
-            self.test_model.register(None)
+            self.test_model.register(reg_data)
             self.test_model.stop.assert_called_once_with()
 
     def test_deregister(self):
-        data = {
-            "name": self.test_model.bundle.profile["name"]
+        name = self.test_model.bundle.profile["name"]
+        data1 = {
+            "name": "%s-%s" % (name, "model",)
+        }
+        data2 = {
+            "name": "%s-%s" % (name, "view",)
         }
 
+        self.test_model._conn.tunnels["view"] = "view_tunnel"
+        self.test_model._conn.tunnels["model"] = "model_tunnel"
         with patch("sanji.core.Retry") as Retry:
             Retry.return_value = None
             retry = False
@@ -366,19 +379,30 @@ class TestSanjiClass(unittest.TestCase):
             interval = 1
             self.test_model.deregister(retry=retry, interval=interval,
                                        timeout=timeout)
-            Retry.assert_called_once_with(
-                target=self.test_model.publish.direct.delete,
-                args=("/controller/registration", data,),
-                kwargs={"timeout": timeout},
-                options={"retry": retry, "interval": interval})
+            expected = ([call(target=self.test_model.publish.direct.delete,
+                              args=("/controller/registration", data1,),
+                              kwargs={"timeout": timeout},
+                              options={"retry": retry, "interval": interval}),
+                         call(target=self.test_model.publish.direct.delete,
+                              args=("/controller/registration", data2,),
+                              kwargs={"timeout": timeout},
+                              options={"retry": retry, "interval": interval})])
+            self.assertEqual(Retry.call_args_list, expected)
 
-    def test_get_profile(self):
+    def test_get_profile_model(self):
         """
         TODO: needs final controller registration spec to vaild this output
         """
         profile = self.test_model.get_profile()
         for resource in profile["resources"]:
             self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 3)
+
+    def test_get_profile_view(self):
+        profile = self.test_model.get_profile(role="view")
+        for resource in profile["resources"]:
+            self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 1)
 
     def test_exit(self):
         with self.assertRaises(SystemExit):
