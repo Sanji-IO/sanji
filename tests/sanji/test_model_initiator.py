@@ -55,9 +55,9 @@ class TestModelInitiatorClass(unittest.TestCase):
     model_path = "/tmp/sanji-sdk/tests/test_myself"
     model_db_folder = "/tmp/sanji-sdk/tests/test_myself/data"
     model_factory_db = \
-        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.factory.json"
+        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json.factory"
     model_backup_db = \
-        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.backup.json"
+        "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json.backup"
     model_db = "/tmp/sanji-sdk/tests/test_myself/data/test_myself.json"
 
     def setUp(self):

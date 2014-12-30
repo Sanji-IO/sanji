@@ -27,9 +27,9 @@ class ModelInitiator(object):
         self.db = None
         self.data_folder_path = self.model_path + "/data"
         self.factory_json_db_path = self.model_path + "/data/" + \
-            self.model_name + ".factory.json"
+            self.model_name + ".json.factory"
         self.backup_json_db_path = self.model_path + "/data/" + \
-            self.model_name + ".backup.json"
+            self.model_name + ".json.backup"
         self.json_db_path = self.model_path + "/data/" + \
             self.model_name + ".json"
         self.db_type = db_type
@@ -79,7 +79,7 @@ class ModelInitiator(object):
     def create_db(self):
         """
         "   Create a db file for model if there is no db.
-        "   User need to prepare thier own xxx.factory.json.
+        "   User need to prepare thier own xxx.json.factory.
         """
         if self.db_type == "json":
             if not os.path.exists(self.json_db_path):
@@ -96,7 +96,7 @@ class ModelInitiator(object):
 
     def recover_db(self, src_file):
         """
-        " Recover DB from xxxxx.backup.json or xxxxx.factory.json to xxxxx.json
+        " Recover DB from xxxxx.backup.json or xxxxx.json.factory to xxxxx.json
         " [src_file]: copy from src_file to xxxxx.json
         """
         with self.db_mutex:
