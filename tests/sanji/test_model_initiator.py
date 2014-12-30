@@ -270,7 +270,11 @@ class TestModelInitiatorClass(unittest.TestCase):
         # case 3: open with no file. (coverage)
         if os.path.exists(self.model_db_folder):
             shutil.rmtree(self.model_db_folder)
-        self.model_initiator.save_db()
+
+        try:
+            self.assertRaises(self.model_initiator.save_db())
+        except Exception:
+            pass
 
     @patch("sanji.model_initiator.Thread")
     def test_start_backup_thread_is_not_alive(self, Thread):
