@@ -45,6 +45,7 @@ class Session(object):
     Session
     """
     def __init__(self):
+        self.aging_unit = 0.5
         self.session_list = {}
         self.session_lock = RLock()
         self.timeout_queue = deque([], maxlen=10)
@@ -116,7 +117,7 @@ class Session(object):
                     session = self.session_list[session_id]
                     # TODO: use system time diff to decrease age
                     #       instead of just - 1 ?
-                    session["age"] = session["age"] - 0.5
+                    session["age"] = session["age"] - self.aging_unit
                     # age > 0
                     if session["age"] > 0:
                         continue
@@ -139,4 +140,4 @@ class Session(object):
                                      != Status.SEND_TIMEOUT
                                      or self.session_list[k]["status"]
                                      != Status.RESPONSE_TIMEOUT}
-            sleep(0.5)
+            sleep(self.aging_unit)
