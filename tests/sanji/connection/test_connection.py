@@ -19,7 +19,9 @@ class TestConnectionClass(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             conn.disconnect()
         with self.assertRaises(NotImplementedError):
-            conn.set_tunnel(None)
+            conn.set_tunnel(None, None)
+        with self.assertRaises(NotImplementedError):
+            conn.set_tunnels(None)
         with self.assertRaises(NotImplementedError):
             conn.set_on_connect(None)
         with self.assertRaises(NotImplementedError):

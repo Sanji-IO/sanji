@@ -25,8 +25,9 @@ class Bundle(object):
         try:
             with open(json_path) as f:
                 self.profile = json.load(f)
-        except Exception:
-            raise BundleConfigError("Can't load file: %s", (json_path,))
+        except Exception as e:
+            raise BundleConfigError("Can't load file: %s, error: %s",
+                                    (json_path, str(e)))
 
         logger.debug("Model: %s config has been loaded." %
                      (self.profile["name"],))

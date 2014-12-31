@@ -109,9 +109,11 @@ class TestPublishClass(unittest.TestCase):
     def test_event(self):
         with patch("sanji.publish.Publish._wait_published") as _wait_published:
             _wait_published.return_value = None
-            self.publish.event("/test/event2",
-                               {"type": "notify2", "message": "hi"})
-            _wait_published.assert_called_once_with(ANY, no_response=True)
+            self.publish._conn.publish = Mock()
+            self.publish.event.get("/test/event2",
+                                   {"type": "notify2", "message": "hi"})
+            self.publish._conn.publish.assert_called_once_with(
+                topic="/controller", qos=2, payload=ANY)
 
     def test_direct(self):
         with patch("sanji.publish.Publish._wait_published") as _wait_published:

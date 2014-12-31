@@ -2,8 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 
-from collections import deque
 import logging
+import uuid
+
+from collections import deque
 from threading import Event
 from threading import RLock
 from threading import Thread
@@ -88,6 +90,8 @@ class Session(object):
                 due to duplicate message id
         """
         with self.session_lock:
+            if not hasattr(message, "id"):
+                message.__setattr__("id", "event-%s" % (uuid.uuid4().hex,))
             if self.session_list.get(message.id, None) is not None:
                 if force is False:
                     raise SessionError("Message id: %s duplicate!" %

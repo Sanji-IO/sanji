@@ -27,12 +27,17 @@ class Publish(object):
     def __init__(self, connection, session):
         self._conn = connection
         self._session = session
+
         self.direct = Object()
+        self.event = Object()
         for method in ["get", "post", "put", "delete"]:
             self.__setattr__(method, self.create_crud_func(method))
             self.direct.__setattr__(method,
                                     self.create_crud_func(method, "DIRECT"))
-        self.event = self.create_crud_func("post", "EVENT")
+
+        for method in ["get", "post", "put", "delete"]:
+            self.event.__setattr__(method,
+                                   self.create_event_func(method))
 
     def _wait_resolved(self, session):
         session["is_resolved"].wait()
@@ -53,7 +58,7 @@ class Publish(object):
             return session
         raise StatusError(session)
 
-    def _create_message(self, headers=None, data=None):
+    def _create_message(self, headers=None, data=None, generate_id=True):
         payload = headers
         if isinstance(data, Message):
             return data
@@ -61,7 +66,22 @@ class Publish(object):
             if data is not None:
                 payload["data"] = data
 
-        return Message(payload, generate_id=True)
+        return Message(payload, generate_id=generate_id)
+
+    def create_event_func(self, method):
+        def _crud(resource, data=None, code=200, timeout=60):
+            message = self._create_message(
+                headers={"resource": resource, "method": method, "code": code},
+                data=data,
+                generate_id=False)
+
+            with self._session.session_lock:
+                mid = self._conn.publish(topic="/controller", qos=2,
+                                         payload=message.to_dict())
+                session = self._session.create(message, mid=mid, age=timeout)
+                session["status"] = Status.SENDING
+            return self._wait_published(session, no_response=True)
+        return _crud
 
     def create_crud_func(self, method, request_type="CRUD"):
         """
@@ -80,9 +100,14 @@ class Publish(object):
                 "method": method
             }
 
-            # DIRECT/EVENT message needs put tunnel in headers for controller
-            if request_type == "DIRECT" or request_type == "EVENT":
-                headers["tunnel"] = self._conn.tunnel
+            # DIRECT message needs put tunnel in headers for controller
+            if request_type == "DIRECT":
+                if self._conn.tunnels["view"] is not None:
+                    headers["tunnel"] = self._conn.tunnels["view"]
+                elif self._conn.tunnels["model"] is not None:
+                    headers["tunnel"] = self._conn.tunnels["model"]
+                else:
+                    headers["tunnel"] = self._conn.tunnels["internel"]
 
             message = self._create_message(headers, data)
             with self._session.session_lock:
@@ -91,9 +116,6 @@ class Publish(object):
                                          payload=message.to_dict())
                 session = self._session.create(message, mid=mid, age=timeout)
                 session["status"] = Status.SENDING
-
-            if request_type == "EVENT":  # EVENT always block is False
-                return self._wait_published(session, no_response=True)
 
             # blocking, until we get response or published
             if block is False:

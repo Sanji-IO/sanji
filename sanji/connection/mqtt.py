@@ -33,7 +33,11 @@ class Mqtt(Connection):
         broker_keepalive=60
     ):
         # proerties
-        self.tunnel = uuid.uuid4().hex
+        self.tunnels = {
+            "internel": uuid.uuid4().hex,
+            "model": None,
+            "view": None
+        }
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.broker_keepalive = broker_keepalive
@@ -64,17 +68,27 @@ class Mqtt(Connection):
         logger.debug("Disconnect to broker")
         self.client.loop_stop()
 
-    def set_tunnel(self, tunnel):
+    def set_tunnel(self, tunnel_type, tunnel):
         """
-        set_tunnel(self, tunnel):
+        set_tunnel(self, tunnel_type, tunnel):
         """
-        if self.tunnel is not None:
-            logger.debug("Unsubscribe: %s", (self.tunnel,))
-            self.client.unsubscribe(str(self.tunnel))
+        orig_tunnel = self.tunnels.get(tunnel_type, None)
+        if orig_tunnel is not None:
+            logger.debug("Unsubscribe: %s", (orig_tunnel,))
+            self.client.unsubscribe(str(orig_tunnel))
 
-        self.tunnel = tunnel
-        self.client.subscribe(str(self.tunnel))
-        logger.debug("Subscribe: %s", (self.tunnel,))
+        self.tunnels[tunnel_type] = tunnel
+        self.client.subscribe(str(tunnel))
+        logger.debug("Subscribe: %s", (tunnel,))
+
+    def set_tunnels(self, tunnels):
+        """
+        set_tunnels(self, tunnels):
+        """
+        for tunnel_type, tunnel in tunnels.iteritems():
+            if tunnel is None:
+                continue
+            self.set_tunnel(tunnel_type, tunnel)
 
     def set_on_connect(self, func):
         """

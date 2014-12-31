@@ -347,39 +347,57 @@ class TestSanjiClass(unittest.TestCase):
                     "tunnel": 1234
                 }
             })
-            self.test_model.register(None)
-            set_tunnel.assert_called_once_with(1234)
+            reg_data = {
+                "name": "test_register",
+                "role": "model",
+                "resources": ["/abc"]
+            }
+            self.test_model.register(reg_data)
+            set_tunnel.assert_called_once_with("model", 1234)
 
         # case 2: register failed call stop
             Retry.return_value = None
-            self.test_model.register(None)
+            self.test_model.register(reg_data)
             self.test_model.stop.assert_called_once_with()
 
     def test_deregister(self):
-        data = {
-            "name": self.test_model.bundle.profile["name"]
+        name = self.test_model.bundle.profile["name"]
+        reg_data = {
+            "name": name,
+            "role": "model",
+            "resources": ["/abc"]
         }
 
+        self.test_model._conn.tunnels["view"] = "view_tunnel"
+        self.test_model._conn.tunnels["model"] = "model_tunnel"
         with patch("sanji.core.Retry") as Retry:
             Retry.return_value = None
             retry = False
             timeout = 2
             interval = 1
-            self.test_model.deregister(retry=retry, interval=interval,
-                                       timeout=timeout)
+            self.test_model.deregister(
+                reg_data=reg_data, retry=retry,
+                interval=interval, timeout=timeout)
             Retry.assert_called_once_with(
                 target=self.test_model.publish.direct.delete,
-                args=("/controller/registration", data,),
+                args=("/controller/registration", reg_data,),
                 kwargs={"timeout": timeout},
                 options={"retry": retry, "interval": interval})
 
-    def test_get_profile(self):
+    def test_get_profile_model(self):
         """
         TODO: needs final controller registration spec to vaild this output
         """
         profile = self.test_model.get_profile()
         for resource in profile["resources"]:
             self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 3)
+
+    def test_get_profile_view(self):
+        profile = self.test_model.get_profile(role="view")
+        for resource in profile["resources"]:
+            self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 1)
 
     def test_exit(self):
         with self.assertRaises(SystemExit):

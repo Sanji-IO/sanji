@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import uuid
 from random import randint
 from Queue import Queue
 from threading import Thread
@@ -26,7 +27,11 @@ class Mockup(Connection):
     def __init__(self):
         self.message_queue = Queue()
         self.publish_onfly = dict()
-        self.tunnel = "mockup_tunnel"
+        self.tunnels = {
+            "internel": uuid.uuid4().hex,
+            "model": None,
+            "view": None
+        }
         self.disconnect_event = Event()
         self._publish_lock = Lock()
         self.on_publish = None
@@ -74,9 +79,9 @@ class Mockup(Connection):
         self.disconnect_event.set()
         return 0
 
-    def set_tunnel(self, tunnel):
-        self.tunnel = tunnel
-        return tunnel
+    def set_tunnels(self, tunnels):
+        self.tunnels = tunnels
+        return tunnels
 
     def set_on_connect(self, func):
         self.on_connect = func
