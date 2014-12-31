@@ -324,9 +324,12 @@ class Sanji(object):
         self._conn.set_tunnels(self._conn.tunnels)
 
         def reg():
-            self.deregister()
-            self.register(self.get_profile("model"))
-            self.register(self.get_profile("view"))
+            model_profile = self.get_profile("model")
+            view_profile = self.get_profile("view")
+            self.deregister(model_profile)
+            self.deregister(view_profile)
+            self.register(model_profile)
+            self.register(view_profile)
             self.is_ready.set()
 
         if self.reg_thread is not None and self.reg_thread.is_alive():
@@ -373,28 +376,24 @@ class Sanji(object):
         logger.info("Register successfully %s tunnel: %s"
                     % (reg_data["name"], resp.data["tunnel"],))
 
-    def deregister(self, retry=True, interval=1, timeout=3):
+    def deregister(self, reg_data, retry=True, interval=1, timeout=3):
         """
         Deregister model/view of this bundle
         """
-        def _deregister(role):
-            data = {"name": "%s-%s" % (self.bundle.profile["name"], role,)}
-            Retry(target=self.publish.direct.delete,
-                  args=("/controller/registration", data,),
-                  kwargs={"timeout": timeout},
-                  options={"retry": retry, "interval": interval})
-            logger.info("Deregister successfully %s tunnel: %s" %
-                        (data["name"], self._conn.tunnels[role],))
-
-        _deregister("model")
-        _deregister("view")
+        Retry(target=self.publish.direct.delete,
+              args=("/controller/registration", reg_data,),
+              kwargs={"timeout": timeout},
+              options={"retry": retry, "interval": interval})
+        logger.info("Deregister successfully %s tunnel: %s" %
+                    (reg_data["name"], self._conn.tunnels[reg_data["role"]],))
 
     def get_profile(self, role="model"):
         profile = copy.deepcopy(self.bundle.profile)
         profile["tunnel"] = self._conn.tunnels["internel"]
         profile["role"] = role
         profile["resources"] = []
-        profile["name"] = "%s-%s" % (profile["name"], role,)
+        profile["name"] = "%s%s" % \
+            (profile["name"], '' if role == 'model' else '-' + role,)
 
         for _ in self.bundle.profile["resources"]:
             if _.get("role", "model") != role:

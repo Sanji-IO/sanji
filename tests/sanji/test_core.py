@@ -4,7 +4,6 @@
 from mock import Mock
 from mock import patch
 from mock import ANY
-from mock import call
 from Queue import Empty
 import os
 import sys
@@ -363,11 +362,10 @@ class TestSanjiClass(unittest.TestCase):
 
     def test_deregister(self):
         name = self.test_model.bundle.profile["name"]
-        data1 = {
-            "name": "%s-%s" % (name, "model",)
-        }
-        data2 = {
-            "name": "%s-%s" % (name, "view",)
+        reg_data = {
+            "name": name,
+            "role": "model",
+            "resources": ["/abc"]
         }
 
         self.test_model._conn.tunnels["view"] = "view_tunnel"
@@ -377,17 +375,14 @@ class TestSanjiClass(unittest.TestCase):
             retry = False
             timeout = 2
             interval = 1
-            self.test_model.deregister(retry=retry, interval=interval,
-                                       timeout=timeout)
-            expected = ([call(target=self.test_model.publish.direct.delete,
-                              args=("/controller/registration", data1,),
-                              kwargs={"timeout": timeout},
-                              options={"retry": retry, "interval": interval}),
-                         call(target=self.test_model.publish.direct.delete,
-                              args=("/controller/registration", data2,),
-                              kwargs={"timeout": timeout},
-                              options={"retry": retry, "interval": interval})])
-            self.assertEqual(Retry.call_args_list, expected)
+            self.test_model.deregister(
+                reg_data=reg_data, retry=retry,
+                interval=interval, timeout=timeout)
+            Retry.assert_called_once_with(
+                target=self.test_model.publish.direct.delete,
+                args=("/controller/registration", reg_data,),
+                kwargs={"timeout": timeout},
+                options={"retry": retry, "interval": interval})
 
     def test_get_profile_model(self):
         """
