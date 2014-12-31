@@ -107,7 +107,8 @@ class TestRouteFunction(unittest.TestCase):
 
 class TestSanjiClass(unittest.TestCase):
 
-    def setUp(self):
+    @patch("sanji.session.Thread")
+    def setUp(self, Thread):
         self.bundle = Bundle(bundle_dir=bundle_dir)
         self.test_model = TestModel(connection=Mockup(),
                                     bundle=self.bundle)

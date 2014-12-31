@@ -53,7 +53,8 @@ class TestFunctionClass(unittest.TestCase):
 
 class TestPublishClass(unittest.TestCase):
 
-    def setUp(self):
+    @patch("sanji.session.Thread")
+    def setUp(self, Thread):
         self.conn = Mockup()
         self.session = Session()
         self.publish = Publish(self.conn, self.session)
