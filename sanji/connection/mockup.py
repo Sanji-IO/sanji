@@ -1,20 +1,26 @@
+from __future__ import print_function
+
 import os
 import sys
 import json
 import uuid
 from random import randint
-from Queue import Queue
 from threading import Thread
 from threading import Lock
 from threading import Event
 
 try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
+
+try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.connection.connection import Connection
 except ImportError as e:
-    print e
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print(e)
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 

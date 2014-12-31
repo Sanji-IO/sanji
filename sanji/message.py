@@ -1,7 +1,11 @@
-import urlparse
 import json
 import copy
 from random import randint
+
+try:
+    from urllib import parse
+except ImportError:
+    import urlparse as parse
 
 
 def parse_querystring(querystring):
@@ -11,7 +15,7 @@ def parse_querystring(querystring):
     if querystring is None or len(querystring) == 0:
         return {}
 
-    qs_dict = urlparse.parse_qs(querystring, keep_blank_values=True)
+    qs_dict = parse.parse_qs(querystring, keep_blank_values=True)
     for key in qs_dict:
         if len(qs_dict[key]) != 1:
             continue
@@ -19,7 +23,7 @@ def parse_querystring(querystring):
         if qs_dict[key] == '':
             qs_dict[key] = True
 
-    return {key: qs_dict[key] for key in qs_dict if len(key) != 0}
+    return dict((key, qs_dict[key]) for key in qs_dict if len(key) != 0)
 
 
 def trim_resource(resource):
@@ -151,7 +155,8 @@ class Message(object):
         """
         to_dict will clean all protected and private properties
         """
-        return {k: self.__dict__[k] for k in self.__dict__ if k.find("_") != 0}
+        return dict(
+            (k, self.__dict__[k]) for k in self.__dict__ if k.find("_") != 0)
 
     def match(self, route):
         """

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+"""
+This is s Sanji Onject
+"""
+
 import inspect
 import logging
 import signal
@@ -9,7 +13,6 @@ import os
 import threading
 import re
 import copy
-from Queue import Queue
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -23,6 +26,10 @@ from sanji.router import Router
 from sanji.session import Session
 from sanji.bundle import Bundle
 
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 logger = logging.getLogger()
 
@@ -222,7 +229,6 @@ class Sanji(object):
         def main_thread():
             # create resp, req thread pool
             self._create_thread_pool()
-
             # start connection, this will block until stop()
             self.conn_thread = Thread(target=self._conn.connect)
             self.conn_thread.daemon = True
