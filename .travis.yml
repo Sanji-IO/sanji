@@ -1,10 +1,12 @@
 language: python
-python:
-  - "2.7"
 install:
   - pip install -r requirements.txt
-  - pip install .
-script: make
+  - pip install tox
+script: make tox
+env:
+  - TOXENV=py26
+  - TOXENV=py27
+  - TOXENV=pypy
 after_success:
   coveralls
 notifications:

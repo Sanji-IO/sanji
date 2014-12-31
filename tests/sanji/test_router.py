@@ -1,17 +1,22 @@
-import unittest
+from __future__ import print_function
+
 import sys
 import os
 
 from mock import Mock
 
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     import sanji.router as router
     from sanji.message import Message
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 
@@ -46,10 +51,10 @@ class TestRouteClass(unittest.TestCase):
         self.assertEqual(len(self.route.handlers), 0)
 
         def callback1():
-            print "I am test callback1"
+            print("I am test callback1")
 
         def callback2():
-            print "I am test callback2"
+            print("I am test callback2")
 
         self.route.get(callback1)
         self.assertEqual(self.route.handlers[0]['method'], "get")
@@ -69,7 +74,7 @@ class TestRouteClass(unittest.TestCase):
         self.assertTrue(hasattr(func, "__call__"))
 
         def callback():
-            print "test callback"
+            print("test callback")
         func(callback)
 
         self.assertEqual(len(self.route.handlers), 1)
@@ -84,7 +89,7 @@ class TestRouteClass(unittest.TestCase):
         )
 
         def callback(req):
-            print req
+            print(req)
 
         self.route.get(callback)
         message = Message(request)
@@ -122,10 +127,10 @@ class TestRouterClass(unittest.TestCase):
         self.assertEqual(len(self.router.routes), 0)
 
         def callback1():
-            print "I am test callback1"
+            print("I am test callback1")
 
         def callback2():
-            print "I am test callback2"
+            print("I am test callback2")
 
     def test_dispatch(self):
         request = {

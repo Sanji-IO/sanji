@@ -1,23 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+from __future__ import print_function
 
 from mock import Mock
 from mock import patch
 from mock import ANY
-from Queue import Empty
 import os
 import sys
 from threading import Event
 from threading import Thread
-import unittest
 import logging
+
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
+
+try:
+    from queue import Empty
+except ImportError as e:
+    print(e)
+    from Queue import Empty
 
 from voluptuous import Schema
 from voluptuous import Required
 from voluptuous import All
 from voluptuous import Length
 from voluptuous import Range
-
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -28,7 +37,8 @@ try:
     from sanji.message import Message
     from sanji.connection.mockup import Mockup
 except ImportError as e:
-    print "Please check the python PATH for import test module."
+    print(e)
+    print("Please check the python PATH for import test module.")
     exit(1)
 
 bundle_dir = os.path.normpath(os.path.realpath(__file__) +
@@ -305,7 +315,7 @@ class TestSanjiClass(unittest.TestCase):
     def test_register_routes(self):
         def func_maker(name, order):
             def wrapper():
-                print name
+                print(name)
             wrapper.__dict__["_order"] = order
             return wrapper
 
@@ -331,8 +341,8 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.is_ready.set()
         self.test_model.deregister = Mock(return_value=True)
         self.test_model.register = Mock(return_value=True)
+        self.test_model.stop = Mock()
         self.test_model.run = run
-        self.test_model.start()
 
     def test_register(self):
         post = Mock()

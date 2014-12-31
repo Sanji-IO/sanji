@@ -1,6 +1,5 @@
 import logging
 import json
-import unittest
 import shutil
 import sys
 import os
@@ -8,6 +7,11 @@ import os
 from mock import patch
 from mock import Mock
 from mock import MagicMock
+
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')

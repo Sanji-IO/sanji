@@ -1,7 +1,13 @@
-import unittest
+from __future__ import print_function
+
 import json
 import sys
 import os
+
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -11,8 +17,8 @@ try:
     from sanji.message import trim_resource
     from sanji.router import Route
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 

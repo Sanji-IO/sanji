@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+from __future__ import print_function
 
 import os
 import sys
@@ -8,13 +9,12 @@ import logging
 import json
 import paho.mqtt.client as mqtt
 
-
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.connection.connection import Connection
 except ImportError as e:
-    print e
-    print "Please check the python PATH for import test module."
+    print(e)
+    print("Please check the python PATH for import test module.")
     exit(1)
 
 

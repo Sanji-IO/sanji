@@ -1,13 +1,13 @@
 from setuptools import setup
+import sanji
 
 setup(name="sanji",
-      version="0.1",
+      version=sanji.__version__,
       description="Sanji SDK",
       url="https://github.com/Sanji-IO",
       author="Sanji Team",
       author_email="sanji@moxa.com",
-      license="MOXA",
+      license="MIT",
       packages=["sanji", "sanji.connection"],
-      zip_safe=False,
       install_requires=["voluptuous"]
       )

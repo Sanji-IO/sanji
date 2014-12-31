@@ -6,14 +6,9 @@ Installation
 ------------
 
 ```sh
-$ pip install -e "git+https://github.com/Sanji-IO/sanji.git#egg=sanji"
-```
-
-**Update SDK**
-```sh
-cd src/sanji && git pull
+$ pip install sanji
 ```
 
 License
 -------
-MOXA License
+MIT License
