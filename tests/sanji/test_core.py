@@ -290,7 +290,7 @@ class TestSanjiClass(unittest.TestCase):
                       "expected int for dictionary value @ data['page']"})
 
     def test__resolve_responses(self):
-        # prepare messages
+        """ It should put message into req_queue if response is not for me """
         msg = Message({
             "id": 3456,
             "code": 200,
@@ -309,6 +309,7 @@ class TestSanjiClass(unittest.TestCase):
         while self.test_model.res_queue.empty() is False:
             pass
 
+        self.assertEqual(msg, self.test_model.req_queue.get())
         self.test_model.res_queue.put(None)
         thread.join()
 

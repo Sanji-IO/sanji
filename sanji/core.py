@@ -192,7 +192,8 @@ class Sanji(object):
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
         if session is None:
-            logger.debug("Unknow response. Not for me.")
+            logger.debug("Response not for me. Treat as EVENT message")
+            self.req_queue.put(message)
 
     def on_publish(self, client, userdata, mid):
         with self._session.session_lock:
