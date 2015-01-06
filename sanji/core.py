@@ -397,20 +397,20 @@ class Sanji(object):
     def get_profile(self, role="model"):
         profile = copy.deepcopy(self.bundle.profile)
         profile["tunnel"] = self._conn.tunnels["internel"]
-        profile["role"] = role
         profile["resources"] = []
         profile["name"] = "%s%s" % \
-            (profile["name"], '' if role == 'model' else '-' + role,)
+            (profile["name"], '' if role == profile["role"] else '-' + role,)
 
         for _ in self.bundle.profile["resources"]:
-            if _.get("role", "model") != role:
+            if _.get("role", profile["role"]) != role:
                 continue
             profile["resources"].append(re.sub(r":(\w+)", r"+", _["resource"]))
 
         return profile
 
 
-def Route(resource=None, methods=None, schema=None):
+def Route(resource=None, methods=["get", "post", "put", "delete"],
+          schema=None):
     """
     route
     """
