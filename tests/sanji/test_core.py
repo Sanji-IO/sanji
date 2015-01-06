@@ -35,6 +35,7 @@ try:
     from sanji.bundle import Bundle
     from sanji.bundle import BundleConfigError
     from sanji.message import Message
+    from sanji.message import MessageType
     from sanji.connection.mockup import Mockup
 except ImportError as e:
     print(e)
@@ -310,6 +311,7 @@ class TestSanjiClass(unittest.TestCase):
             pass
 
         self.assertEqual(msg, self.test_model.req_queue.get())
+        self.assertEqual(msg.type(), MessageType.EVENT)
         self.test_model.res_queue.put(None)
         thread.join()
 

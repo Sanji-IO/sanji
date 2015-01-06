@@ -177,6 +177,15 @@ class Message(object):
 
         return copy.deepcopy(self)
 
+    def to_event(self):
+        """ get rid of id, sign, tunnel and update message type"""
+        for _ in ["id", "sign", "tunnel"]:
+            if not hasattr(self, _):
+                continue
+            delattr(self, _)
+        self._type = Message.get_message_type(self.__dict__)
+        return self
+
     @staticmethod
     def get_message_type(message):
         """
