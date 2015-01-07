@@ -32,7 +32,7 @@ class Mockup(Connection):
 
     def __init__(self):
         self.message_queue = Queue()
-        self.publish_onfly = dict()
+        self.publish_onfly = {}
         self.tunnels = {
             "internel": uuid.uuid4().hex,
             "model": None,
@@ -50,7 +50,7 @@ class Mockup(Connection):
             self._publish_lock.acquire()
             for mid in self.publish_onfly:
                 arrival.append(mid)
-            self.publish_onfly = dict()
+            self.publish_onfly = {}
             self._publish_lock.release()
 
             def pub(mid):
