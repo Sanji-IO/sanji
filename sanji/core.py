@@ -398,11 +398,13 @@ class Sanji(object):
         profile = copy.deepcopy(self.bundle.profile)
         profile["tunnel"] = self._conn.tunnels["internel"]
         profile["resources"] = []
+        profile["role"] = role
         profile["name"] = "%s%s" % \
-            (profile["name"], '' if role == profile["role"] else '-' + role,)
+            (profile["name"], '' if role == self.bundle.profile["role"]
+                              else '-' + role,)
 
         for _ in self.bundle.profile["resources"]:
-            if _.get("role", profile["role"]) != role:
+            if _.get("role", self.bundle.profile["role"]) != role:
                 continue
             profile["resources"].append(re.sub(r":(\w+)", r"+", _["resource"]))
 
