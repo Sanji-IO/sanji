@@ -177,6 +177,23 @@ class Message(object):
 
         return copy.deepcopy(self)
 
+    def to_response(self, sign, code=200, data=None):
+        """ transform message to response message """
+        self.data = data
+        self.__setattr__('code', code)
+        if hasattr(self, 'query'):
+            del self.query
+        if hasattr(self, 'param'):
+            del self.param
+        if hasattr(self, 'tunnel'):
+            del self.tunnel
+        if hasattr(self, 'sign') and isinstance(self.sign, list):
+            self.sign.append(sign)
+        else:
+            self.sign = [sign]
+
+        return self
+
     def to_event(self):
         """ get rid of id, sign, tunnel and update message type"""
         for _ in ["id", "sign", "tunnel"]:
