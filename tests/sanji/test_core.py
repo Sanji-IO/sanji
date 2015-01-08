@@ -147,7 +147,7 @@ class TestSanjiClass(unittest.TestCase):
     def test_on_publish(self):
         self.test_model.on_publish(None, None, 1)
 
-    def test_on_message(self):
+    def test_on_sanji_message(self):
         # Normal message
         class MyMessage(object):
             def __init__(self, payload):
@@ -166,7 +166,7 @@ class TestSanjiClass(unittest.TestCase):
             }
         })
         with patch.object(self.test_model, "req_queue") as req_queue:
-            self.test_model.on_message(None, None, message)
+            self.test_model.on_sanji_message(None, None, message)
             req_queue.put.assert_called_once_with(ANY)
 
         # Response
@@ -181,18 +181,18 @@ class TestSanjiClass(unittest.TestCase):
             }
         })
         with patch.object(self.test_model, "res_queue") as res_queue:
-            self.test_model.on_message(None, None, message2)
+            self.test_model.on_sanji_message(None, None, message2)
             res_queue.put.assert_called_once_with(ANY)
 
         # Non-JSON String message
         message = MyMessage(None)
-        self.test_model.on_message(None, None, message)
+        self.test_model.on_sanji_message(None, None, message)
         with self.assertRaises(Empty):
             self.test_model.req_queue.get(timeout=0.001)
 
         # UNKNOW TYPE message
         message = MyMessage("{}")
-        self.test_model.on_message(None, None, message)
+        self.test_model.on_sanji_message(None, None, message)
         with self.assertRaises(Empty):
             self.test_model.req_queue.get(timeout=0.001)
 
@@ -373,7 +373,7 @@ class TestSanjiClass(unittest.TestCase):
                 "resources": ["/abc"]
             }
             self.test_model.register(reg_data)
-            set_tunnel.assert_called_once_with("model", 1234)
+            set_tunnel.assert_called_once_with("model", 1234, ANY)
 
         # case 2: register failed call stop
             Retry.return_value = None

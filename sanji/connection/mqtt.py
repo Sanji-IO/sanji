@@ -34,9 +34,9 @@ class Mqtt(Connection):
     ):
         # proerties
         self.tunnels = {
-            "internel": uuid.uuid4().hex,
-            "model": None,
-            "view": None
+            "internel": (uuid.uuid4().hex, None),
+            "model": (None, None),
+            "view": (None, None)
         }
         self.broker_host = broker_host
         self.broker_port = broker_port
@@ -46,6 +46,12 @@ class Mqtt(Connection):
         # methods
         self.subscribe = self.client.subscribe
         self.unsubscribe = self.client.unsubscribe
+        self.message_callback_add = self.client.message_callback_add
+        self.message_callback_remove = self.client.message_callback_remove
+        self.client.on_log = self.on_log
+
+    def on_log(self, mosq, obj, level, string):
+        pass
 
     def connect(self):
         """
@@ -68,16 +74,20 @@ class Mqtt(Connection):
         logger.debug("Disconnect to broker")
         self.client.loop_stop()
 
-    def set_tunnel(self, tunnel_type, tunnel):
+    def set_tunnel(self, tunnel_type, tunnel, callback=None):
         """
-        set_tunnel(self, tunnel_type, tunnel):
+        set_tunnel(self, tunnel_type, tunnel, callback=None):
         """
-        orig_tunnel = self.tunnels.get(tunnel_type, None)
+        orig_tunnel = self.tunnels.get(tunnel_type, (None, None))[0]
         if orig_tunnel is not None:
             logger.debug("Unsubscribe: %s", (orig_tunnel,))
             self.client.unsubscribe(str(orig_tunnel))
 
-        self.tunnels[tunnel_type] = tunnel
+        self.tunnels[tunnel_type] = (tunnel, callback)
+
+        if callback is not None:
+            self.message_callback_add(tunnel, callback)
+
         self.client.subscribe(str(tunnel))
         logger.debug("Subscribe: %s", (tunnel,))
 
@@ -85,10 +95,10 @@ class Mqtt(Connection):
         """
         set_tunnels(self, tunnels):
         """
-        for tunnel_type, tunnel in tunnels.iteritems():
+        for tunnel_type, (tunnel, callback) in tunnels.iteritems():
             if tunnel is None:
                 continue
-            self.set_tunnel(tunnel_type, tunnel)
+            self.set_tunnel(tunnel_type, tunnel, callback)
 
     def set_on_connect(self, func):
         """

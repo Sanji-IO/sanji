@@ -206,7 +206,7 @@ class Message(object):
         Notice: this method will return a deepcopy
         """
         msg = copy.deepcopy(self)
-        for _ in ["id", "sign", "tunnel"]:
+        for _ in ["id", "sign", "tunnel", "query", "param"]:
             if not hasattr(msg, _):
                 continue
             delattr(msg, _)

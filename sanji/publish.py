@@ -87,7 +87,12 @@ class Publish(object):
         """
         create_crud_func
         """
-        def _crud(resource, data=None, block=True, timeout=60):
+        def _crud(resource,
+                  data=None,
+                  block=True,
+                  timeout=60,
+                  topic="/controller",
+                  qos=2):
             """
             _crud
 
@@ -102,17 +107,17 @@ class Publish(object):
 
             # DIRECT message needs put tunnel in headers for controller
             if request_type == "DIRECT":
-                if self._conn.tunnels["view"] is not None:
-                    headers["tunnel"] = self._conn.tunnels["view"]
-                elif self._conn.tunnels["model"] is not None:
-                    headers["tunnel"] = self._conn.tunnels["model"]
+                if self._conn.tunnels["view"][0] is not None:
+                    headers["tunnel"] = self._conn.tunnels["view"][0]
+                elif self._conn.tunnels["model"][0] is not None:
+                    headers["tunnel"] = self._conn.tunnels["model"][0]
                 else:
-                    headers["tunnel"] = self._conn.tunnels["internel"]
+                    headers["tunnel"] = self._conn.tunnels["internel"][0]
 
             message = self._create_message(headers, data)
             with self._session.session_lock:
-                mid = self._conn.publish(topic="/controller",
-                                         qos=2,
+                mid = self._conn.publish(topic=topic,
+                                         qos=qos,
                                          payload=message.to_dict())
                 session = self._session.create(message, mid=mid, age=timeout)
                 session["status"] = Status.SENDING
