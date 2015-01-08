@@ -178,30 +178,42 @@ class Message(object):
         return copy.deepcopy(self)
 
     def to_response(self, sign, code=200, data=None):
-        """ transform message to response message """
-        self.data = data
-        self.__setattr__('code', code)
-        if hasattr(self, 'query'):
-            del self.query
-        if hasattr(self, 'param'):
-            del self.param
-        if hasattr(self, 'tunnel'):
-            del self.tunnel
-        if hasattr(self, 'sign') and isinstance(self.sign, list):
-            self.sign.append(sign)
-        else:
-            self.sign = [sign]
+        """
+        transform message to response message
+        Notice: this method will return a deepcopy
+        """
+        msg = copy.deepcopy(self)
+        msg.data = data
 
-        return self
+        setattr(msg, 'code', code)
+        for _ in ["query", "param", "tunnel"]:
+            if not hasattr(msg, _):
+                continue
+            delattr(msg, _)
+
+        if hasattr(msg, 'sign') and isinstance(msg.sign, list):
+            msg.sign.append(sign)
+        else:
+            msg.sign = [sign]
+
+        msg._type = Message.get_message_type(msg.__dict__)
+
+        return msg
 
     def to_event(self):
-        """ get rid of id, sign, tunnel and update message type"""
+        """
+        get rid of id, sign, tunnel and update message type
+        Notice: this method will return a deepcopy
+        """
+        msg = copy.deepcopy(self)
         for _ in ["id", "sign", "tunnel"]:
-            if not hasattr(self, _):
+            if not hasattr(msg, _):
                 continue
-            delattr(self, _)
-        self._type = Message.get_message_type(self.__dict__)
-        return self
+            delattr(msg, _)
+
+        msg._type = Message.get_message_type(msg.__dict__)
+
+        return msg
 
     @staticmethod
     def get_message_type(message):

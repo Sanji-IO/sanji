@@ -310,8 +310,15 @@ class TestSanjiClass(unittest.TestCase):
         while self.test_model.res_queue.empty() is False:
             pass
 
-        self.assertEqual(msg, self.test_model.req_queue.get())
-        self.assertEqual(msg.type(), MessageType.EVENT)
+        event_msg_ans = Message({
+            "code": 200,
+            "method": "get",
+            "resource": "/not_found/12345",
+            "data": None
+        }, generate_id=False)
+        event_msg = self.test_model.req_queue.get()
+        self.assertEqual(event_msg_ans.to_dict(), event_msg.to_dict())
+        self.assertEqual(event_msg.type(), MessageType.EVENT)
         self.test_model.res_queue.put(None)
         thread.join()
 

@@ -131,12 +131,12 @@ class Publish(object):
             """
             _response
             """
-            message.to_response(code=code, data=data, sign=sign)
+            resp_msg = message.to_response(code=code, data=data, sign=sign)
 
             with self._session.session_lock:
                 mid = self._conn.publish(topic="/controller",
-                                         qos=2, payload=message.to_dict())
-                session = self._session.create(message, mid=mid, age=10)
+                                         qos=2, payload=resp_msg.to_dict())
+                session = self._session.create(resp_msg, mid=mid, age=10)
             logging.debug("sending response as mid: %s" % mid)
             return self._wait_published(session, no_response=True)
         return _response
