@@ -12,7 +12,6 @@ import sys
 import os
 import threading
 import re
-import copy
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -72,8 +71,7 @@ class Sanji(object):
         self.res_queue = Queue()
 
         # Setup callbacks
-        self._conn.set_on_connect(self.on_connect)
-        self._conn.set_on_message(self.on_message)
+        self._conn.set_on_message(self.on_sanji_message)
         self._conn.set_on_connect(self.on_connect)
         self._conn.set_on_publish(self.on_publish)
 
@@ -192,7 +190,8 @@ class Sanji(object):
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
         if session is None:
-            logger.debug("Unknow response. Not for me.")
+            logger.debug("Response not for me. Treat as EVENT message")
+            self.req_queue.put(message.to_event())
 
     def on_publish(self, client, userdata, mid):
         with self._session.session_lock:
@@ -286,7 +285,7 @@ class Sanji(object):
             thread.join()
         self.is_ready.clear()
 
-    def on_message(self, client, userdata, msg):
+    def on_sanji_message(self, client, userdata, msg):
         """This function will recevie all message from mqtt
         client
             the client instance for this callback
@@ -327,9 +326,14 @@ class Sanji(object):
         rc
             the connection result
         """
-        self._conn.set_tunnels(self._conn.tunnels)
+        logger.debug("Connection established with result code %s" % rc)
+
+        if self.reg_thread is not None and self.reg_thread.is_alive():
+            logger.debug("Joining previous reg_thread")
+            self.reg_thread.join()
 
         def reg():
+            self._conn.set_tunnels(self._conn.tunnels)
             model_profile = self.get_profile("model")
             view_profile = self.get_profile("view")
             self.deregister(model_profile)
@@ -338,14 +342,9 @@ class Sanji(object):
             self.register(view_profile)
             self.is_ready.set()
 
-        if self.reg_thread is not None and self.reg_thread.is_alive():
-            self.reg_thread.join()
-
         self.reg_thread = Thread(target=reg)
         self.reg_thread.daemon = True
         self.reg_thread.start()
-
-        logger.debug("Connection established with result code %s" % rc)
 
     def register(self, reg_data, retry=True, interval=1, timeout=3):
         """
@@ -374,8 +373,10 @@ class Sanji(object):
             self.stop()
             return
 
-        self._conn.set_tunnel(reg_data["role"], resp.data["tunnel"])
-        self.bundle.profile["currentTunnels"] = self._conn.tunnels
+        self._conn.set_tunnel(
+            reg_data["role"], resp.data["tunnel"], self.on_sanji_message)
+        self.bundle.profile["currentTunnels"] = [
+            tunnel for tunnel, callback in self._conn.tunnels.items()]
         self.bundle.profile["regCount"] = \
             self.bundle.profile.get("reg_count", 0) + 1
 
@@ -391,25 +392,28 @@ class Sanji(object):
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
         logger.info("Deregister successfully %s tunnel: %s" %
-                    (reg_data["name"], self._conn.tunnels[reg_data["role"]],))
+                    (reg_data["name"],
+                     self._conn.tunnels[reg_data["role"]][0],))
 
     def get_profile(self, role="model"):
-        profile = copy.deepcopy(self.bundle.profile)
-        profile["tunnel"] = self._conn.tunnels["internel"]
-        profile["role"] = role
+        profile = dict((k, v) for k, v in self.bundle.profile.items())
+        profile["tunnel"] = self._conn.tunnels["internel"][0]
         profile["resources"] = []
+        profile["role"] = role
         profile["name"] = "%s%s" % \
-            (profile["name"], '' if role == 'model' else '-' + role,)
+            (profile["name"], '' if role == self.bundle.profile["role"]
+                              else '-' + role,)
 
         for _ in self.bundle.profile["resources"]:
-            if _.get("role", "model") != role:
+            if _.get("role", self.bundle.profile["role"]) != role:
                 continue
             profile["resources"].append(re.sub(r":(\w+)", r"+", _["resource"]))
 
         return profile
 
 
-def Route(resource=None, methods=None, schema=None):
+def Route(resource=None, methods=["get", "post", "put", "delete"],
+          schema=None):
     """
     route
     """

@@ -4,6 +4,8 @@ import os
 import sys
 import json
 import uuid
+from mock import Mock
+
 from random import randint
 from threading import Thread
 from threading import Lock
@@ -32,17 +34,19 @@ class Mockup(Connection):
 
     def __init__(self):
         self.message_queue = Queue()
-        self.publish_onfly = dict()
+        self.publish_onfly = {}
         self.tunnels = {
-            "internel": uuid.uuid4().hex,
-            "model": None,
-            "view": None
+            "internel": (uuid.uuid4().hex, None),
+            "model": (None, None),
+            "view": (None, None)
         }
         self.disconnect_event = Event()
         self._publish_lock = Lock()
         self.on_publish = None
         self.on_message = None
         self.on_connect = lambda client, userdata, flags, rc: 0
+        self.message_callback_add = Mock()
+        self.message_callback_remove = Mock()
 
     def __onpublish(self):
         while self.disconnect_event.is_set() is False:
@@ -50,7 +54,7 @@ class Mockup(Connection):
             self._publish_lock.acquire()
             for mid in self.publish_onfly:
                 arrival.append(mid)
-            self.publish_onfly = dict()
+            self.publish_onfly = {}
             self._publish_lock.release()
 
             def pub(mid):

@@ -11,6 +11,7 @@
   "hook": [],
   "dependencies": {},
   "repository": "",
+  "role": "model",
   "resources": [
     {
       "methods": "get",
