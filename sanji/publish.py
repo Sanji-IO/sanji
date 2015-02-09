@@ -69,14 +69,20 @@ class Publish(object):
         return Message(payload, generate_id=generate_id)
 
     def create_event_func(self, method):
-        def _crud(resource, data=None, code=200, timeout=60):
+        def _crud(resource,
+                  data=None,
+                  code=200,
+                  timeout=60,
+                  topic="/controller",
+                  qos=2):
+
             message = self._create_message(
                 headers={"resource": resource, "method": method, "code": code},
                 data=data,
                 generate_id=False)
 
             with self._session.session_lock:
-                mid = self._conn.publish(topic="/controller", qos=2,
+                mid = self._conn.publish(topic=topic, qos=qos,
                                          payload=message.to_dict())
                 session = self._session.create(message, mid=mid, age=timeout)
                 session["status"] = Status.SENDING
