@@ -98,6 +98,7 @@ class Publish(object):
                   block=True,
                   timeout=60,
                   topic="/controller",
+                  tunnel=None,
                   qos=2):
             """
             _crud
@@ -113,7 +114,9 @@ class Publish(object):
 
             # DIRECT message needs put tunnel in headers for controller
             if request_type == "DIRECT":
-                if self._conn.tunnels["view"][0] is not None:
+                if tunnel is not None:
+                    headers["tunnel"] = tunnel
+                elif self._conn.tunnels["view"][0] is not None:
                     headers["tunnel"] = self._conn.tunnels["view"][0]
                 elif self._conn.tunnels["model"][0] is not None:
                     headers["tunnel"] = self._conn.tunnels["model"][0]
