@@ -135,7 +135,7 @@ class Sanji(object):
                 map(lambda handler: ___dispatch(handler, result["message"]),
                     result["handlers"])
         except Exception as e:
-            logger.warning(e)
+            logger.error(e, exc_info=True)
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
@@ -168,7 +168,7 @@ class Sanji(object):
                     ),
                     result["handlers"])
         except Exception as e:
-            logger.warning(e)
+            logger.error(e, exc_info=True)
             resp = self.publish.create_response(
                 message, self.bundle.profile["name"])
             # if exception is belongs to schema error
@@ -298,7 +298,7 @@ class Sanji(object):
         try:
             message = Message(msg.payload)
         except (TypeError, ValueError) as e:
-            logger.debug(e)
+            logger.error(e, exc_info=True)
             return
 
         if message.type() == MessageType.UNKNOWN:
@@ -380,8 +380,8 @@ class Sanji(object):
         self.bundle.profile["regCount"] = \
             self.bundle.profile.get("reg_count", 0) + 1
 
-        logger.info("Register successfully %s tunnel: %s"
-                    % (reg_data["name"], resp.data["tunnel"],))
+        logger.debug("Register successfully %s tunnel: %s"
+                     % (reg_data["name"], resp.data["tunnel"],))
 
     def deregister(self, reg_data, retry=True, interval=1, timeout=3):
         """
@@ -391,9 +391,9 @@ class Sanji(object):
               args=("/controller/registration", reg_data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
-        logger.info("Deregister successfully %s tunnel: %s" %
-                    (reg_data["name"],
-                     self._conn.tunnels[reg_data["role"]][0],))
+        logger.debug("Deregister successfully %s tunnel: %s" %
+                     (reg_data["name"],
+                      self._conn.tunnels[reg_data["role"]][0],))
 
     def get_profile(self, role="model"):
         profile = dict((k, v) for k, v in self.bundle.profile.items())
