@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-This is s Sanji Onject
+This is s Sanji Object
 """
 
 import inspect
