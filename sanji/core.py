@@ -12,6 +12,7 @@ import sys
 import os
 import threading
 import re
+import traceback
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -169,12 +170,20 @@ class Sanji(object):
                     result["handlers"])
         except Exception as e:
             logger.error(e, exc_info=True)
+            resp_data = {"message": "Internal Error."}
+
+            if os.getenv("SANJI_ENV", 'debug') == 'debug':
+                ex_type, ex, tb = sys.exc_info()
+                resp_data["traceback"] = "".join(traceback.format_tb(tb))
+
             resp = self.publish.create_response(
                 message, self.bundle.profile["name"])
+
             # if exception is belongs to schema error
             if isinstance(e, MultipleInvalid):
                 return resp(code=400, data={"message": str(e)})
-            return resp(code=500, data={"message": "Internal Error."})
+
+            return resp(code=500, data=resp_data)
 
     def _resolve_responses(self):
         """

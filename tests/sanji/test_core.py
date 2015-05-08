@@ -10,6 +10,11 @@ import sys
 from threading import Event
 from threading import Thread
 import logging
+from voluptuous import Schema
+from voluptuous import Required
+from voluptuous import All
+from voluptuous import Length
+from voluptuous import Range
 
 if sys.version_info >= (2, 7):
     import unittest
@@ -21,12 +26,6 @@ try:
 except ImportError as e:
     print(e)
     from Queue import Empty
-
-from voluptuous import Schema
-from voluptuous import Required
-from voluptuous import All
-from voluptuous import Length
-from voluptuous import Range
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -235,8 +234,9 @@ class TestSanjiClass(unittest.TestCase):
                 "message": Message({})
             }]
             self.test_model._Sanji__dispatch_message(None)
-            resp.assert_called_once_with(code=500,
-                                         data={"message": "Internal Error."})
+            resp.assert_called_once_with(
+                code=500,
+                data={"message": "Internal Error.", "traceback": ANY})
 
         # case 4: schema
             resp.reset_mock()
