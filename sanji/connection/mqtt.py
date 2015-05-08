@@ -18,7 +18,7 @@ except ImportError as e:
     exit(1)
 
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.connection.mqtt")
 
 
 class Mqtt(Connection):
@@ -57,7 +57,7 @@ class Mqtt(Connection):
         """
         connect
         """
-        logger.debug("Start connecting to broker")
+        _logger.debug("Start connecting to broker")
         while True:
             try:
                 self.client.connect(self.broker_host, self.broker_port,
@@ -71,7 +71,7 @@ class Mqtt(Connection):
         """
         disconnect
         """
-        logger.debug("Disconnect to broker")
+        _logger.debug("Disconnect to broker")
         self.client.loop_stop()
 
     def set_tunnel(self, tunnel_type, tunnel, callback=None):
@@ -80,7 +80,7 @@ class Mqtt(Connection):
         """
         orig_tunnel = self.tunnels.get(tunnel_type, (None, None))[0]
         if orig_tunnel is not None:
-            logger.debug("Unsubscribe: %s", (orig_tunnel,))
+            _logger.debug("Unsubscribe: %s", (orig_tunnel,))
             self.client.unsubscribe(str(orig_tunnel))
 
         self.tunnels[tunnel_type] = (tunnel, callback)
@@ -89,7 +89,7 @@ class Mqtt(Connection):
             self.message_callback_add(tunnel, callback)
 
         self.client.subscribe(str(tunnel))
-        logger.debug("Subscribe: %s", (tunnel,))
+        _logger.debug("Subscribe: %s", (tunnel,))
 
     def set_tunnels(self, tunnels):
         """

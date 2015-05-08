@@ -5,7 +5,7 @@ import os
 import json
 import logging
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.bundle")
 
 
 class Bundle(object):
@@ -29,8 +29,8 @@ class Bundle(object):
             raise BundleConfigError("Can't load file: %s, error: %s",
                                     (json_path, str(e)))
 
-        logger.debug("Model: %s config has been loaded." %
-                     (self.profile["name"],))
+        _logger.debug("Model: %s config has been loaded." %
+                      (self.profile["name"],))
 
 
 class BundleConfigError(Exception):

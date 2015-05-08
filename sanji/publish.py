@@ -11,7 +11,7 @@ from sanji.session import TimeoutError
 from sanji.session import StatusError
 
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.publish")
 
 
 class Object(object):
@@ -180,10 +180,10 @@ def Retry(target=None, args=[], kwargs={},
             if resp.code == 200:
                 return resp
 
-            logger.debug("Request got response status: %s"
-                         % (resp.code,) + " retry: %s" % (retry,))
+            _logger.debug("Request got response status: %s"
+                          % (resp.code,) + " retry: %s" % (retry,))
         except TimeoutError:
-            logger.debug("Request message is timeout", exc_info=True)
+            _logger.debug("Request message is timeout", exc_info=True)
 
         # register unsuccessful goes here
         # infinity retry

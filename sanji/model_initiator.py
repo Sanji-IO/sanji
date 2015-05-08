@@ -11,7 +11,7 @@ from threading import Thread
 from threading import Event
 from threading import RLock
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.model_initiator")
 
 
 class ModelInitiator(object):
@@ -52,7 +52,7 @@ class ModelInitiator(object):
         try:
             self.load_db()  # load existing/factory
         except Exception as e:
-            logger.debug("*** %s" % str(e))
+            _logger.debug("*** %s" % str(e))
             try:
                 self.recover_db(self.backup_json_db_path)
             except Exception:
@@ -67,7 +67,7 @@ class ModelInitiator(object):
         try:
             self.load_db()  # load backup
         except Exception as b:
-            logger.debug("*** %s" % str(b))
+            _logger.debug("*** %s" % str(b))
             self.recover_db(self.factory_json_db_path)
             self.load_db()  # load factory
             self.db_status = "factory"
@@ -89,7 +89,7 @@ class ModelInitiator(object):
                             self.factory_json_db_path, self.json_db_path)
                     return True
                 else:
-                    logger.debug(
+                    _logger.debug(
                         "*** NO such file: %s" % self.factory_json_db_path)
 
         return False
@@ -103,7 +103,7 @@ class ModelInitiator(object):
             try:
                 shutil.copy2(src_file, self.json_db_path)
             except IOError as e:
-                logger.debug("*** NO: %s file." % src_file)
+                _logger.debug("*** NO: %s file." % src_file)
                 raise e
 
     def backup_db(self):
@@ -115,7 +115,7 @@ class ModelInitiator(object):
                 try:
                     shutil.copy2(self.json_db_path, self.backup_json_db_path)
                 except (IOError, OSError):
-                    logger.debug("*** No file to copy.")
+                    _logger.debug("*** No file to copy.")
 
     def load_db(self):
         """
@@ -125,7 +125,7 @@ class ModelInitiator(object):
             with open(self.json_db_path) as fp:
                 self.db = json.load(fp)
         except Exception as e:
-            logger.debug("*** Open JSON DB error.")
+            _logger.debug("*** Open JSON DB error.")
             raise e
 
     def save_db(self):
@@ -140,7 +140,7 @@ class ModelInitiator(object):
                     json.dump(self.db, fp, indent=4)
             except Exception as e:
                 # disk full or something.
-                logger.debug("*** Write JSON DB to file error.")
+                _logger.debug("*** Write JSON DB to file error.")
                 raise e
 
             else:
