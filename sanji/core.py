@@ -31,7 +31,7 @@ try:
 except ImportError:
     from Queue import Queue
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk")
 
 
 class Sanji(object):
@@ -90,9 +90,9 @@ class Sanji(object):
         # Custom init function
         if hasattr(self, 'init') and \
            hasattr(self.init, '__call__'):
-            logger.debug("Custom init start")
+            _logger.debug("Custom init start")
             self.init(*args, **kwargs)
-            logger.debug("Custom init finish")
+            _logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
         """
@@ -113,7 +113,7 @@ class Sanji(object):
         while True:
             message = self.req_queue.get()
             if message is None:
-                logger.debug("_dispatch_message thread is terminated")
+                _logger.debug("_dispatch_message thread is terminated")
                 return
 
             if message._type != MessageType.EVENT:
@@ -129,22 +129,22 @@ class Sanji(object):
             if args_len == 2:
                 handler["callback"](self, result["message"])
             else:
-                logger.debug("Route [event] callback's arguments must be" +
-                             "function(self, message)")
+                _logger.debug("Route [event] callback's arguments must be" +
+                              "function(self, message)")
         try:
             for result in results:  # same route
                 map(lambda handler: ___dispatch(handler, result["message"]),
                     result["handlers"])
         except Exception as e:
-            logger.error(e, exc_info=True)
+            _logger.error(e, exc_info=True)
 
     def __dispatch_message(self, message):
         results = self.router.dispatch(message)
         # Request not found
         if len(results) == 0:
             error_msg = "Route '%s' not found." % message.resource
-            logger.info(error_msg)
-            logger.debug(message.to_json())
+            _logger.info(error_msg)
+            _logger.debug(message.to_json())
             resp = self.publish.create_response(
                 message, self.bundle.profile["name"])
             resp(code=404, data={"message": error_msg})
@@ -157,8 +157,8 @@ class Sanji(object):
             if args_len >= 3:
                 handler["callback"](self, result["message"], resp)
             else:
-                logger.debug("Route callback's arguments must be" +
-                             "function(self, message, response)")
+                _logger.debug("Route callback's arguments must be" +
+                              "function(self, message, response)")
 
         try:
             for result in results:  # same route
@@ -169,7 +169,7 @@ class Sanji(object):
                     ),
                     result["handlers"])
         except Exception as e:
-            logger.error(e, exc_info=True)
+            _logger.error(e, exc_info=True)
             resp_data = {"message": "Internal Error."}
 
             if os.getenv("SANJI_ENV", 'debug') == 'debug':
@@ -192,14 +192,14 @@ class Sanji(object):
         while True:
             message = self.res_queue.get()
             if message is None:
-                logger.debug("_resolve_responses thread is terminated")
+                _logger.debug("_resolve_responses thread is terminated")
                 return
             self.__resolve_responses(message)
 
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
         if session is None:
-            logger.debug("Response not for me. Treat as EVENT message")
+            _logger.debug("Response not for me. Treat as EVENT message")
             self.req_queue.put(message.to_event())
 
     def on_publish(self, client, userdata, mid):
@@ -228,7 +228,7 @@ class Sanji(object):
             thread.start()
             self.thread_list.append((thread, stop(self.res_queue)))
 
-        logger.debug("Thread pool is created")
+        _logger.debug("Thread pool is created")
 
     def start(self):
         """
@@ -246,7 +246,7 @@ class Sanji(object):
             self.is_ready.wait()
 
             if hasattr(self, 'run'):
-                logger.debug("Start running...")
+                _logger.debug("Start running...")
                 self.run()
 
         # start main_thread
@@ -262,7 +262,7 @@ class Sanji(object):
             self.stop_event.wait()
 
         self.stop()
-        logger.debug("Shutdown successfully")
+        _logger.debug("Shutdown successfully")
 
     def exit(self, signum=None, frame=None):
         """
@@ -275,12 +275,12 @@ class Sanji(object):
         """
         exit
         """
-        logger.debug("Bundle [%s] has been shutting down" %
-                     self.bundle.profile["name"])
+        _logger.debug("Bundle [%s] has been shutting down" %
+                      self.bundle.profile["name"])
 
         if hasattr(self, 'before_stop') and \
            hasattr(self.before_stop, '__call__'):
-            logger.debug("Invoking before_stop...")
+            _logger.debug("Invoking before_stop...")
             self.before_stop()
 
         self._conn.disconnect()
@@ -307,11 +307,11 @@ class Sanji(object):
         try:
             message = Message(msg.payload)
         except (TypeError, ValueError) as e:
-            logger.error(e, exc_info=True)
+            _logger.error(e, exc_info=True)
             return
 
         if message.type() == MessageType.UNKNOWN:
-            logger.debug("Got an UNKNOWN message, don't dispatch")
+            _logger.debug("Got an UNKNOWN message, don't dispatch")
             return
 
         if message.type() == MessageType.RESPONSE:
@@ -335,10 +335,10 @@ class Sanji(object):
         rc
             the connection result
         """
-        logger.debug("Connection established with result code %s" % rc)
+        _logger.debug("Connection established with result code %s" % rc)
 
         if self.reg_thread is not None and self.reg_thread.is_alive():
-            logger.debug("Joining previous reg_thread")
+            _logger.debug("Joining previous reg_thread")
             self.reg_thread.join()
 
         def reg():
@@ -369,8 +369,8 @@ class Sanji(object):
             Tunnel if success
         """
         if len(reg_data["resources"]) == 0:
-            logger.debug("%s no need to register due to no resources" %
-                         (reg_data["name"]))
+            _logger.debug("%s no need to register due to no resources" %
+                          (reg_data["name"]))
             return
 
         resp = Retry(target=self.publish.direct.post,
@@ -378,7 +378,7 @@ class Sanji(object):
                      kwargs={"timeout": timeout},
                      options={"retry": retry, "interval": interval})
         if resp is None:
-            logger.error("Can\'t not register to controller")
+            _logger.error("Can\'t not register to controller")
             self.stop()
             return
 
@@ -389,8 +389,8 @@ class Sanji(object):
         self.bundle.profile["regCount"] = \
             self.bundle.profile.get("reg_count", 0) + 1
 
-        logger.debug("Register successfully %s tunnel: %s"
-                     % (reg_data["name"], resp.data["tunnel"],))
+        _logger.debug("Register successfully %s tunnel: %s"
+                      % (reg_data["name"], resp.data["tunnel"],))
 
     def deregister(self, reg_data, retry=True, interval=1, timeout=3):
         """
@@ -400,9 +400,9 @@ class Sanji(object):
               args=("/controller/registration", reg_data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
-        logger.debug("Deregister successfully %s tunnel: %s" %
-                     (reg_data["name"],
-                      self._conn.tunnels[reg_data["role"]][0],))
+        _logger.debug("Deregister successfully %s tunnel: %s" %
+                      (reg_data["name"],
+                       self._conn.tunnels[reg_data["role"]][0],))
 
     def get_profile(self, role="model"):
         profile = dict((k, v) for k, v in self.bundle.profile.items())

@@ -15,7 +15,7 @@ from time import time
 from sanji.message import Message
 
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.session")
 
 
 class Status(object):
@@ -66,7 +66,8 @@ class Session(object):
             session = self.session_list.pop(msg_id, None)
             if session is None:
                 # TODO: Warning message, nothing can be resolved.
-                logger.debug("Nothing can be resolved message id: %s" % msg_id)
+                _logger.debug(
+                    "Nothing can be resolved message id: %s" % msg_id)
                 return
             session["resolve_message"] = message
             session["status"] = status
@@ -80,7 +81,7 @@ class Session(object):
                     session["status"] = Status.SENT
                     session["is_published"].set()
                     return session
-            logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
+            _logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
             return None
 
     def create(self, message, mid=None, age=60, force=True):
@@ -127,7 +128,7 @@ class Session(object):
                         continue
 
                     # age <= 0, timeout!
-                    logger.debug("Message timeout id:%s", session_id)
+                    _logger.debug("Message timeout id:%s", session_id)
                     if session["is_published"].is_set():
                         session["status"] = Status.SEND_TIMEOUT
                     else:
