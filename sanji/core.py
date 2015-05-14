@@ -13,7 +13,7 @@ import os
 import threading
 import re
 import traceback
-import random
+from random import random
 from threading import Event
 from threading import Thread
 from time import sleep
