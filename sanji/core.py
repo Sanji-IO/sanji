@@ -13,6 +13,7 @@ import os
 import threading
 import re
 import traceback
+import random
 from threading import Event
 from threading import Thread
 from time import sleep
@@ -55,6 +56,7 @@ class Sanji(object):
         self.bundle = bundle
         self.stop_event = stop_event
         self.reg_thread = None
+        self.reg_delay = lambda: random() * 5
 
         # Router-related (Dispatch)
         self.router = Router()
@@ -342,6 +344,13 @@ class Sanji(object):
             self.reg_thread.join()
 
         def reg():
+            delay = None
+            if hasattr(delay, '__call__'):
+                delay = self.reg_delay()
+            else:
+                delay = self.reg_delay
+
+            sleep(delay)
             self._conn.set_tunnels(self._conn.tunnels)
             model_profile = self.get_profile("model")
             view_profile = self.get_profile("view")
