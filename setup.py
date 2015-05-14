@@ -17,7 +17,7 @@ setup(
     author_email="sanji@moxa.com",
     license="MIT",
     packages=["sanji", "sanji.connection"],
-    install_requires=["voluptuous"],
+    install_requires=["voluptuous", "simplejson"],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
