@@ -1,4 +1,4 @@
-import json
+import simplejson as json
 import copy
 from random import randint
 
@@ -148,7 +148,8 @@ class Message(object):
         """
         data_dict = self.to_dict()
         if pretty:
-            return json.dumps(data_dict, sort_keys=True, indent=2)
+            return json.dumps(
+                data_dict, sort_keys=True, indent=2)
         return json.dumps(data_dict, sort_keys=True)
 
     def to_dict(self):

@@ -3,6 +3,7 @@ from __future__ import print_function
 import json
 import sys
 import os
+from decimal import Decimal
 
 if sys.version_info >= (2, 7):
     import unittest
@@ -287,6 +288,17 @@ class TestMessageClass(unittest.TestCase):
         for prop in json.loads(msg.to_json(pretty=False)):
             self.assertNotEqual(prop.find("_"), 0)
 
+    def test_to_json_with_decimal_type(self):
+        msg = Message({
+                "decimalType": Decimal('0.000001')
+            })
+        for prop in json.loads(msg.to_json()):
+            self.assertNotEqual(prop.find("_"), 0)
+        for prop in json.loads(msg.to_json(pretty=False)):
+            self.assertNotEqual(prop.find("_"), 0)
+
+        self.assertEquals(
+            msg.to_json(pretty=False), "{\"decimalType\": 0.000001}")
 
 if __name__ == "__main__":
     unittest.main()
