@@ -1,6 +1,7 @@
 flake8
 coveralls
 paho-mqtt
+simplejson
 voluptuous
 nose
 mock
