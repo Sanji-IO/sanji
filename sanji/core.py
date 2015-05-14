@@ -345,7 +345,7 @@ class Sanji(object):
 
         def reg():
             delay = None
-            if hasattr(delay, '__call__'):
+            if hasattr(self.reg_delay, '__call__'):
                 delay = self.reg_delay()
             else:
                 delay = self.reg_delay
