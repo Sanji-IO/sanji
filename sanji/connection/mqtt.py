@@ -6,7 +6,7 @@ import os
 import sys
 import uuid
 import logging
-import json
+import simplejson as json
 import paho.mqtt.client as mqtt
 
 try:
