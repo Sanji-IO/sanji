@@ -355,30 +355,26 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.run = run
 
     def test_register(self):
-        post = Mock()
+        post = Mock(return_value=Message({
+            "code": 200,
+            "data": {
+                "tunnel": 1234
+            }
+        }))
         set_tunnel = Mock()
         self.test_model.stop = Mock()
+        self.test_model.deregister = Mock()
         self.test_model.publish.direct.post = post
         self.test_model._conn.set_tunnel = set_tunnel
         # case 1: normal
-        with patch("sanji.core.Retry") as Retry:
-            Retry.return_value = Message({
-                "data": {
-                    "tunnel": 1234
-                }
-            })
-            reg_data = {
-                "name": "test_register",
-                "role": "model",
-                "resources": ["/abc"]
-            }
-            self.test_model.register(reg_data)
-            set_tunnel.assert_called_once_with("model", 1234, ANY)
 
-        # case 2: register failed call stop
-            Retry.return_value = None
-            self.test_model.register(reg_data)
-            self.test_model.stop.assert_called_once_with()
+        reg_data = {
+            "name": "test_register",
+            "role": "model",
+            "resources": ["/abc"]
+        }
+        self.test_model.register(reg_data)
+        set_tunnel.assert_called_once_with("model", 1234, ANY)
 
     def test_deregister(self):
         name = self.test_model.bundle.profile["name"]
