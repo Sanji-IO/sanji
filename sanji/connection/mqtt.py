@@ -8,6 +8,8 @@ import uuid
 import logging
 import simplejson as json
 import paho.mqtt.client as mqtt
+from time import sleep
+
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -42,6 +44,7 @@ class Mqtt(Connection):
         self.broker_port = broker_port
         self.broker_keepalive = broker_keepalive
         self.client = mqtt.Client()
+        self.connect_delay = 3
 
         # methods
         self.subscribe = self.client.subscribe
@@ -64,7 +67,10 @@ class Mqtt(Connection):
                                     self.broker_keepalive)
                 break
             except Exception:
-                pass
+                _logger.debug(
+                    "Connect failed. wait %s sec" % self.connect_delay)
+                sleep(self.connect_delay)
+
         self.client.loop_forever()
 
     def disconnect(self):
