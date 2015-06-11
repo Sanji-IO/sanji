@@ -183,7 +183,9 @@ def Retry(target=None, args=[], kwargs={},
             _logger.debug("Request got response status: %s"
                           % (resp.code,) + " retry: %s" % (retry,))
         except TimeoutError:
-            _logger.debug("Request message is timeout", exc_info=True)
+            _logger.debug("Request message is timeout")
+            _logger.debug(args)
+            _logger.debug(kwargs)
 
         # register unsuccessful goes here
         # infinity retry

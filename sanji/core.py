@@ -25,6 +25,7 @@ from sanji.publish import Publish
 from sanji.publish import Retry
 from sanji.router import Router
 from sanji.session import Session
+from sanji.session import TimeoutError
 from sanji.bundle import Bundle
 
 try:
@@ -382,14 +383,27 @@ class Sanji(object):
                           (reg_data["name"]))
             return
 
-        resp = Retry(target=self.publish.direct.post,
-                     args=("/controller/registration", reg_data,),
-                     kwargs={"timeout": timeout},
-                     options={"retry": retry, "interval": interval})
+        def _register():
+            try:
+                resp = self.publish.direct.post(
+                    "/controller/registration", reg_data)
+                if resp.code == 200:
+                    return resp
+            except TimeoutError:
+                _logger.debug("Register message is timeout")
+
+            return False
+
+        resp = _register()
+        while resp is False:
+            _logger.debug("Register failed.")
+            self.deregister(reg_data)
+            resp = _register()
+
         if resp is None:
             _logger.error("Can\'t not register to controller")
             self.stop()
-            return
+            return False
 
         self._conn.set_tunnel(
             reg_data["role"], resp.data["tunnel"], self.on_sanji_message)
