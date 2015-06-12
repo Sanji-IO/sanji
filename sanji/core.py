@@ -157,9 +157,6 @@ class Sanji(object):
             args_len = len(inspect.getargspec(handler["callback"]).args)
             if args_len >= 3:
                 handler["callback"](self, result["message"], resp)
-            else:
-                _logger.debug("Route callback's arguments must be" +
-                              "function(self, message, response)")
 
         try:
             for result in results:  # same route
