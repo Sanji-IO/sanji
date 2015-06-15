@@ -131,9 +131,7 @@ class Sanji(object):
             args_len = len(inspect.getargspec(handler["callback"]).args)
             if args_len == 2:
                 handler["callback"](self, result["message"])
-            else:
-                _logger.debug("Route [event] callback's arguments must be" +
-                              "function(self, message)")
+
         try:
             for result in results:  # same route
                 map(lambda handler: ___dispatch(handler, result["message"]),
@@ -159,9 +157,6 @@ class Sanji(object):
             args_len = len(inspect.getargspec(handler["callback"]).args)
             if args_len >= 3:
                 handler["callback"](self, result["message"], resp)
-            else:
-                _logger.debug("Route callback's arguments must be" +
-                              "function(self, message, response)")
 
         try:
             for result in results:  # same route
@@ -202,7 +197,6 @@ class Sanji(object):
     def __resolve_responses(self, message):
         session = self._session.resolve(message.id, message)
         if session is None:
-            _logger.debug("Response not for me. Treat as EVENT message")
             self.req_queue.put(message.to_event())
 
     def on_publish(self, client, userdata, mid):

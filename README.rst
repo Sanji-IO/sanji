@@ -4,8 +4,8 @@ Sanji Framework SDK (Python)
     :target: https://travis-ci.org/Sanji-IO/sanji
     :alt: Build Status
 
-.. image:: https://pypip.in/version/modem-cmd/badge.svg
-    :target: https://pypi.python.org/pypi/modem-cmd/
+.. image:: https://pypip.in/version/sanji/badge.svg
+    :target: https://pypi.python.org/pypi/sanji/
     :alt: Latest Version
 
 .. image:: https://coveralls.io/repos/Sanji-IO/sanji/badge.png?branch=develop

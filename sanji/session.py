@@ -65,10 +65,8 @@ class Session(object):
         with self.session_lock:
             session = self.session_list.pop(msg_id, None)
             if session is None:
-                # TODO: Warning message, nothing can be resolved.
-                _logger.debug(
-                    "Nothing can be resolved message id: %s" % msg_id)
                 return
+
             session["resolve_message"] = message
             session["status"] = status
             session["is_resolved"].set()
