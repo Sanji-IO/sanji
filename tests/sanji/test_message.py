@@ -251,8 +251,8 @@ class TestMessageClass(unittest.TestCase):
         msg = Message({})
         msg_id = msg.generate_id()
         self.assertEqual(msg.id, msg_id)
-        self.assertTrue(msg.id < 65535)
-        self.assertTrue(msg.id > 0)
+        self.assertGreater(msg.id, 0)
+        self.assertLess(msg.id, 655350)
 
     def test_init(self):
         msg = Message({
@@ -261,7 +261,7 @@ class TestMessageClass(unittest.TestCase):
         }, generate_id=True)
 
         self.assertGreater(msg.id, 0)
-        self.assertLess(msg.id, 65535)
+        self.assertLess(msg.id, 655350)
         self.assertEqual(msg.type(), MessageType.REQUEST)
 
         msg_noid = Message({

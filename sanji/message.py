@@ -1,11 +1,15 @@
 import simplejson as json
 import copy
+import os
+import random
 from random import randint
 
 try:
     from urllib import parse
 except ImportError:
     import urlparse as parse
+
+random.seed(os.urandom(10))
 
 
 def parse_querystring(querystring):
@@ -136,7 +140,7 @@ class Message(object):
         self._type = Message.get_message_type(self.__dict__)
 
     def generate_id(self):
-        setattr(self, "id", randint(0, 65535))
+        setattr(self, "id", randint(0, 655350))
         return self.id
 
     def type(self):

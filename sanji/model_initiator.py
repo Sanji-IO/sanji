@@ -81,18 +81,21 @@ class ModelInitiator(object):
         "   Create a db file for model if there is no db.
         "   User need to prepare thier own xxx.json.factory.
         """
-        if self.db_type == "json":
-            if not os.path.exists(self.json_db_path):
-                if os.path.exists(self.factory_json_db_path):
-                    with self.db_mutex:
-                        shutil.copy2(
-                            self.factory_json_db_path, self.json_db_path)
-                    return True
-                else:
-                    _logger.debug(
-                        "*** NO such file: %s" % self.factory_json_db_path)
+        if self.db_type != "json":
+            raise RuntimeError("db_type only supports json now")
 
-        return False
+        if os.path.exists(self.json_db_path):
+            return False
+
+        if os.path.exists(self.factory_json_db_path):
+            with self.db_mutex:
+                shutil.copy2(
+                    self.factory_json_db_path, self.json_db_path)
+            return True
+
+        _logger.debug(
+            "*** NO such file: %s" % self.factory_json_db_path)
+        raise RuntimeError("No *.json.factory file")
 
     def recover_db(self, src_file):
         """
