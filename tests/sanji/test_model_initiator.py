@@ -156,13 +156,14 @@ class TestModelInitiatorClass(unittest.TestCase):
             os.remove(self.model_db)
         if os.path.exists(self.model_factory_db):
             os.remove(self.model_factory_db)
-        result = self.model_initiator.create_db()
-        self.assertFalse(result)
+
+        with self.assertRaises(RuntimeError):
+            result = self.model_initiator.create_db()
 
         # case 3: sql type
         self.db_type = "sql"
-        result = self.model_initiator.create_db()
-        self.assertFalse(result)
+        with self.assertRaises(RuntimeError):
+            result = self.model_initiator.create_db()
 
     def test_recover_db(self):
         # case 1: Check file which restore from backup db
