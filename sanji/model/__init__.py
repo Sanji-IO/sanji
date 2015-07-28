@@ -1,9 +1,17 @@
 from sanji.model_initiator import ModelInitiator
+from voluptuous import Schema
 
 
 class Model(object):
     def __init__(self, name, path, schema=None):
-        self.schema = schema
+        if schema is not None:
+            if not isinstance(schema, Schema):
+                raise TypeError(
+                    "schema should be instance of voluptuous.Schema")
+            self.schema = schema
+        else:
+            self.schema = None
+
         self.model = ModelInitiator(
             model_name=name,
             model_path=path
@@ -17,6 +25,21 @@ class Model(object):
 
         return max(map(lambda obj: obj["id"], self.model.db))
 
+    def validation(self, instance):
+        """Valid input instance is vaild or not
+            Args:
+                Object: input instance
+            Returns:
+                Object: Instance after vaildation or original instance
+                        if schema is None
+            Raises:
+                Error: If vaildation failed
+        """
+        if self.schema is None:
+            return instance
+
+        return self.schema(instance)
+
     def add(self, obj):
         """Add a object
             Args:
@@ -25,10 +48,12 @@ class Model(object):
                 Object: Object with id
             Raises:
                 TypeError: If add object is not a dict
+                MultipleInvalid: If input object is invaild
         """
         if isinstance(obj, list):
             raise TypeError("Add object should be a dict object")
 
+        obj = self.validation(obj)
         obj["id"] = self.maxId + 1
         self.model.db.append(obj)
 
@@ -66,7 +91,9 @@ class Model(object):
             Returns:
                 Object: Updated object
                 None: If specified object id is not found
+                MultipleInvalid: If input object is invaild
         """
+        newObj = self.validation(newObj)
         for obj in self.model.db:
             if obj["id"] != id:
                 continue
