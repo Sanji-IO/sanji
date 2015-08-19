@@ -3,19 +3,23 @@ from voluptuous import Schema
 
 
 class Model(object):
-    def __init__(self, name, path, schema=None):
-        if schema is not None:
-            if not isinstance(schema, Schema):
-                raise TypeError(
-                    "schema should be instance of voluptuous.Schema")
-            self.schema = schema
-        else:
-            self.schema = None
+
+    def __init__(self, name, path, schema=None, model_cls=dict):
+        self.model_cls = model_cls
+        self.schema = schema
+        if schema is not None and not isinstance(schema, Schema):
+            raise TypeError("schema should be instance of voluptuous.Schema")
+
+        if not issubclass(model_cls, dict):
+            raise TypeError("model_cls should be derivative dict class")
 
         self.model = ModelInitiator(
             model_name=name,
             model_path=path
         )
+
+    def _cast_model(self, obj):
+        return self.model_cls(obj)
 
     @property
     def maxId(self):
@@ -50,13 +54,12 @@ class Model(object):
                 TypeError: If add object is not a dict
                 MultipleInvalid: If input object is invaild
         """
-        if isinstance(obj, list):
+        if not isinstance(obj, dict):
             raise TypeError("Add object should be a dict object")
-
         obj = self.validation(obj)
+        obj = self._cast_model(obj)
         obj["id"] = self.maxId + 1
         self.model.db.append(obj)
-
         return obj
 
     def get(self, id):
@@ -70,7 +73,7 @@ class Model(object):
         """
         for obj in self.model.db:
             if obj["id"] == id:
-                return obj
+                return self._cast_model(obj)
 
         return None
 
@@ -79,9 +82,20 @@ class Model(object):
             Args:
                 id (int): Object's id should be deleted
             Returns:
-                None
+                len(int): affected rows
         """
+        before_len = len(self.model.db)
         self.model.db = [t for t in self.model.db if t["id"] != id]
+        return before_len - len(self.model.db)
+
+    def removeAll(self):
+        """Remove all objects
+            Returns:
+                len(int): affected rows
+        """
+        before_len = len(self.model.db)
+        self.model.db = []
+        return before_len - len(self.model.db)
 
     def update(self, id, newObj):
         """Update a object
@@ -99,6 +113,7 @@ class Model(object):
                 continue
             newObj.pop("id", None)
             obj.update(newObj)
+            obj = self._cast_model(obj)
             return obj
 
         return None
@@ -108,4 +123,8 @@ class Model(object):
             Returns:
                 List: list of all objects
         """
-        return self.model.db
+        objs = []
+        for obj in self.model.db:
+            objs.append(self._cast_model(obj))
+
+        return objs

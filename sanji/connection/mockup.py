@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
-import json
+import simplejson as json
 import uuid
 from mock import Mock
 

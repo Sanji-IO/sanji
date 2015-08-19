@@ -45,6 +45,12 @@ class TestModelClass(unittest.TestCase):
         with self.assertRaises(TypeError):
             Model(name="test", path="/tmp", schema={"key": int})
 
+    def test__init__invaild_model_cls(self):
+        """Create a Model instance with wrong model_cls type,
+            should raise TypeError"""
+        with self.assertRaises(TypeError):
+            Model(name="test", path="/tmp", model_cls=list)
+
     def test_add(self):
         """Add an object, should return inserted object with id"""
         newObj = self.model.add({"key": "value"})
