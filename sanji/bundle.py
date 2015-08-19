@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import os
-import json
+import simplejson as json
 import logging
 
 _logger = logging.getLogger("sanji.sdk.bundle")
