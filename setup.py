@@ -9,7 +9,7 @@ def read(*paths):
 
 setup(
     name="sanji",
-    version="0.0.6",
+    version="0.0.7",
     description="Sanji Framework SDK",
     long_description=read('README.rst'),
     url="https://github.com/Sanji-IO/sanji",
