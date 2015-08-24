@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import logging
-import json
+import simplejson as json
 import os
 import shutil
 import subprocess
