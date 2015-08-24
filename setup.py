@@ -9,14 +9,14 @@ def read(*paths):
 
 setup(
     name="sanji",
-    version="0.0.7",
+    version="0.0.8",
     description="Sanji Framework SDK",
     long_description=read('README.rst'),
     url="https://github.com/Sanji-IO/sanji",
     author="Sanji Team",
     author_email="sanji@moxa.com",
     license="MIT",
-    packages=["sanji", "sanji.connection"],
+    packages=["sanji", "sanji.connection", "sanji.model"],
     install_requires=["voluptuous", "simplejson"],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
