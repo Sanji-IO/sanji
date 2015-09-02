@@ -57,8 +57,8 @@ class Model(object):
         if not isinstance(obj, dict):
             raise TypeError("Add object should be a dict object")
         obj = self.validation(obj)
-        obj = self._cast_model(obj)
         obj["id"] = self.maxId + 1
+        obj = self._cast_model(obj)
         self.model.db.append(obj)
         return obj
 
