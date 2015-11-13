@@ -60,6 +60,7 @@ class Model(object):
         obj["id"] = self.maxId + 1
         obj = self._cast_model(obj)
         self.model.db.append(obj)
+        self.model.save_db()
         return obj
 
     def get(self, id):
@@ -86,6 +87,7 @@ class Model(object):
         """
         before_len = len(self.model.db)
         self.model.db = [t for t in self.model.db if t["id"] != id]
+        self.model.save_db()
         return before_len - len(self.model.db)
 
     def removeAll(self):
@@ -95,6 +97,7 @@ class Model(object):
         """
         before_len = len(self.model.db)
         self.model.db = []
+        self.model.save_db()
         return before_len - len(self.model.db)
 
     def update(self, id, newObj):
@@ -111,9 +114,11 @@ class Model(object):
         for obj in self.model.db:
             if obj["id"] != id:
                 continue
+
             newObj.pop("id", None)
             obj.update(newObj)
             obj = self._cast_model(obj)
+            self.model.save_db()
             return obj
 
         return None
