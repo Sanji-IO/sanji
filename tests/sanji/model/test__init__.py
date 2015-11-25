@@ -83,6 +83,12 @@ class TestModelClass(unittest.TestCase):
         self.model.remove(1)
         self.assertEqual(self.model.get(1), None)
 
+    def test_removeAll(self):
+        """Delete all objects, should return nothing"""
+        self.model.removeAll()
+        objs = self.model.getAll()
+        self.assertEqual(len(objs), 0)
+
     def test_update(self):
         """Update object, should return new object"""
         new_obj = self.model.update(1, {"key": "updated value"})
