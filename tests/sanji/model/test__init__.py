@@ -83,6 +83,12 @@ class TestModelClass(unittest.TestCase):
         self.model.remove(1)
         self.assertEqual(self.model.get(1), None)
 
+    def test_removeAll(self):
+        """Delete all objects, should return nothing"""
+        self.model.removeAll()
+        objs = self.model.getAll()
+        self.assertEqual(len(objs), 0)
+
     def test_update(self):
         """Update object, should return new object"""
         new_obj = self.model.update(1, {"key": "updated value"})
@@ -99,6 +105,27 @@ class TestModelClass(unittest.TestCase):
         """Update object which is not exist, should return None"""
         new_obj = self.model.update(10, {"key": "updated value"})
         self.assertIsNone(new_obj)
+
+    def test_set(self):
+        """Update object, should return new object"""
+        new_obj = self.model.set(1, {
+            "newkey": "updated value"
+        })
+        self.assertIsNotNone(new_obj)
+        self.assertEqual(self.model.get(1)["newkey"], "updated value")
+        self.assertNotIn("key", self.model.get(1))
+
+    def test_set_invaild(self):
+        """Update an invaild object(against schema),
+            should raise MutlitpleInvalid"""
+        with self.assertRaises(MultipleInvalid):
+            self.model_with_schema.set(1, {"key": "updated value"})
+
+    def test_set_non_exist(self):
+        """Update object which is not exist, should return None"""
+        new_obj = self.model.set(10, {"key": "updated value"})
+        self.assertIsNone(new_obj)
+
 
 if __name__ == "__main__":
     unittest.main()
