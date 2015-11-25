@@ -100,5 +100,23 @@ class TestModelClass(unittest.TestCase):
         new_obj = self.model.update(10, {"key": "updated value"})
         self.assertIsNone(new_obj)
 
+    def test_set(self):
+        """Update object, should return new object"""
+        new_obj = self.model.set(1, {"key": "updated value"})
+        self.assertIsNotNone(new_obj)
+        self.assertEqual(self.model.get(1)["key"], "updated value")
+
+    def test_set_invaild(self):
+        """Update an invaild object(against schema),
+            should raise MutlitpleInvalid"""
+        with self.assertRaises(MultipleInvalid):
+            self.model_with_schema.set(1, {"key": "updated value"})
+
+    def test_set_non_exist(self):
+        """Update object which is not exist, should return None"""
+        new_obj = self.model.set(10, {"key": "updated value"})
+        self.assertIsNone(new_obj)
+
+
 if __name__ == "__main__":
     unittest.main()
