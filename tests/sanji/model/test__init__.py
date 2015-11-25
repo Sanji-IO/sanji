@@ -108,9 +108,12 @@ class TestModelClass(unittest.TestCase):
 
     def test_set(self):
         """Update object, should return new object"""
-        new_obj = self.model.set(1, {"key": "updated value"})
+        new_obj = self.model.set(1, {
+            "newkey": "updated value"
+        })
         self.assertIsNotNone(new_obj)
-        self.assertEqual(self.model.get(1)["key"], "updated value")
+        self.assertEqual(self.model.get(1)["newkey"], "updated value")
+        self.assertNotIn("key", self.model.get(1))
 
     def test_set_invaild(self):
         """Update an invaild object(against schema),
