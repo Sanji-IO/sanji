@@ -1,5 +1,22 @@
 from sanji.model_initiator import ModelInitiator
 from voluptuous import Schema
+from threading import Event
+
+
+class ModelBatch(object):
+
+    def __init__(self, model):
+        self.enable = Event()
+        self.model = model
+
+    def __enter__(self):
+        if self.enable.is_set():
+            raise RuntimeError("Already in batch mode")
+        self.enable.set()
+
+    def __exit__(self, type, value, traceback):
+        self.enable.clear()
+        self.model.save_db()
 
 
 class Model(object):
@@ -7,6 +24,7 @@ class Model(object):
     def __init__(self, name, path, schema=None, model_cls=dict):
         self.model_cls = model_cls
         self.schema = schema
+
         if schema is not None and not isinstance(schema, Schema):
             raise TypeError("schema should be instance of voluptuous.Schema")
 
@@ -17,6 +35,10 @@ class Model(object):
             model_name=name,
             model_path=path
         )
+        self._batch = ModelBatch(self.model)
+
+    def batch(self):
+        return self._batch
 
     def _cast_model(self, obj):
         return self.model_cls(obj)
@@ -60,7 +82,9 @@ class Model(object):
         obj["id"] = self.maxId + 1
         obj = self._cast_model(obj)
         self.model.db.append(obj)
-        self.model.save_db()
+
+        if not self._batch.enable.is_set():
+            self.model.save_db()
         return obj
 
     def get(self, id):
@@ -87,7 +111,8 @@ class Model(object):
         """
         before_len = len(self.model.db)
         self.model.db = [t for t in self.model.db if t["id"] != id]
-        self.model.save_db()
+        if not self._batch.enable.is_set():
+            self.model.save_db()
         return before_len - len(self.model.db)
 
     def removeAll(self):
@@ -97,7 +122,8 @@ class Model(object):
         """
         before_len = len(self.model.db)
         self.model.db = []
-        self.model.save_db()
+        if not self._batch.enable.is_set():
+            self.model.save_db()
         return before_len - len(self.model.db)
 
     def update(self, id, newObj):
@@ -118,7 +144,8 @@ class Model(object):
             newObj.pop("id", None)
             obj.update(newObj)
             obj = self._cast_model(obj)
-            self.model.save_db()
+            if not self._batch.enable.is_set():
+                self.model.save_db()
             return obj
 
         return None
@@ -140,7 +167,8 @@ class Model(object):
 
             newObj["id"] = id
             self.model.db[index] = self._cast_model(newObj)
-            self.model.save_db()
+            if not self._batch.enable.is_set():
+                self.model.save_db()
             return self.model.db[index]
 
         return None

@@ -126,6 +126,42 @@ class TestModelClass(unittest.TestCase):
         new_obj = self.model.set(10, {"key": "updated value"})
         self.assertIsNone(new_obj)
 
+    def test_batch_mode(self):
+        """Test batch mode"""
+        with self.model.batch():
+            self.model.set(1, {"test": "I should not be saved."})
+            with open(self.temp_dir + "/data/test.json", "r") as f:
+                db = json.load(f)
+                self.assertNotEqual(
+                    self.model.get(1)["test"], db[0].get("test", None))
+
+        with open(self.temp_dir + "/data/test.json", "r") as f:
+            db = json.load(f)
+            self.assertEqual(self.model.get(1)["test"], db[0].get("test"))
+
+    def test_batch_mode_raise_error(self):
+        """In batch mode, even raise error after set it will be saved"""
+        try:
+            with self.model.batch():
+                self.model.set(1, {"test": "I should not be saved."})
+                with open(self.temp_dir + "/data/test.json", "r") as f:
+                    db = json.load(f)
+                    self.assertNotEqual(
+                        self.model.get(1)["test"], db[0].get("test", None))
+                raise RuntimeError()
+        except Exception:
+            pass
+
+        with open(self.temp_dir + "/data/test.json", "r") as f:
+            db = json.load(f)
+            self.assertEqual(self.model.get(1)["test"], db[0].get("test"))
+
+    def test_batch_mode_error(self):
+        """Test batch mode in batch mode, should raise RuntimeError"""
+        with self.assertRaises(RuntimeError):
+            with self.model.batch():
+                with self.model.batch():
+                    pass
 
 if __name__ == "__main__":
     unittest.main()
