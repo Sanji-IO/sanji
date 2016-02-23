@@ -139,8 +139,8 @@ class Session(object):
                 # remove all timeout session
                 self.session_list = dict((k, self.session_list[k]) for k
                                          in self.session_list
-                                         if self.session_list[k]["status"]
-                                         != Status.SEND_TIMEOUT
-                                         or self.session_list[k]["status"]
-                                         != Status.RESPONSE_TIMEOUT)
+                                         if self.session_list[k]["status"] !=
+                                         Status.SEND_TIMEOUT or
+                                         self.session_list[k]["status"] !=
+                                         Status.RESPONSE_TIMEOUT)
             sleep(self.aging_unit)
