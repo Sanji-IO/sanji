@@ -153,7 +153,7 @@ class Sanji(object):
 
         def ___dispatch(handler, message, resp):
             if handler["schema"] is not None:
-                handler["schema"](message.data)
+                message.data = handler["schema"](message.data)
             args_len = len(inspect.getargspec(handler["callback"]).args)
             if args_len >= 3:
                 handler["callback"](self, result["message"], resp)
