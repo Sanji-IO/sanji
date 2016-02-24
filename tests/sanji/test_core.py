@@ -15,6 +15,7 @@ from voluptuous import Required
 from voluptuous import All
 from voluptuous import Length
 from voluptuous import Range
+from voluptuous import REMOVE_EXTRA
 
 if sys.version_info >= (2, 7):
     import unittest
@@ -289,6 +290,34 @@ class TestSanjiClass(unittest.TestCase):
                 code=400,
                 data={"message":
                       "expected int for dictionary value @ data['page']"})
+
+        # case 6: schema with extra
+            resp.reset_mock()
+            schema_extra = Schema({
+                Required('q'): All(str, Length(min=1))
+            }, extra=REMOVE_EXTRA)
+            m = Message({
+                "data": {
+                    "q": "abc",
+                    "extram_data": "remove_me"  # extra data
+                }
+            })
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": schema_cb,
+                    "schema": schema_extra
+                }],
+                "message": m
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(
+                code=200,
+                data={
+                    "data": {
+                        "q": "abc"
+                    }
+                }
+            )
 
     def test__resolve_responses(self):
         """ It should put message into req_queue if response is not for me """

@@ -153,7 +153,7 @@ class Sanji(object):
 
         def ___dispatch(handler, message, resp):
             if handler["schema"] is not None:
-                handler["schema"](message.data)
+                message.data = handler["schema"](message.data)
             args_len = len(inspect.getargspec(handler["callback"]).args)
             if args_len >= 3:
                 handler["callback"](self, result["message"], resp)
@@ -461,9 +461,9 @@ def Route(resource=None, methods=["get", "post", "put", "delete"],
         # http://stackoverflow.com/questions/4459531/how-to-read-class-attributes-in-the-same-order-as-declared
         f_locals = sys._getframe(1).f_locals
         _order = len([v for v in f_locals.itervalues()
-                     if hasattr(v, '__call__')
-                     and hasattr(v, '__name__')
-                     and v.__name__ == "wrapper"])
+                     if hasattr(v, '__call__') and
+                     hasattr(v, '__name__') and
+                     v.__name__ == "wrapper"])
         wrapper.__dict__["_order"] = _order
         return wrapper
     return _route
