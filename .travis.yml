@@ -5,7 +5,6 @@ install:
   - pip install tox
 script: make tox
 env:
-  - TOXENV=py26
   - TOXENV=py27
   - TOXENV=pypy
 after_success:
