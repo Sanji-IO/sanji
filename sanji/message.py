@@ -1,7 +1,15 @@
-import urlparse
-import json
+import simplejson as json
 import copy
+import os
+import random
 from random import randint
+
+try:
+    from urllib import parse
+except ImportError:
+    import urlparse as parse
+
+random.seed(os.urandom(10))
 
 
 def parse_querystring(querystring):
@@ -11,7 +19,7 @@ def parse_querystring(querystring):
     if querystring is None or len(querystring) == 0:
         return {}
 
-    qs_dict = urlparse.parse_qs(querystring, keep_blank_values=True)
+    qs_dict = parse.parse_qs(querystring, keep_blank_values=True)
     for key in qs_dict:
         if len(qs_dict[key]) != 1:
             continue
@@ -19,7 +27,7 @@ def parse_querystring(querystring):
         if qs_dict[key] == '':
             qs_dict[key] = True
 
-    return {key: qs_dict[key] for key in qs_dict if len(key) != 0}
+    return dict((key, qs_dict[key]) for key in qs_dict if len(key) != 0)
 
 
 def trim_resource(resource):
@@ -132,7 +140,7 @@ class Message(object):
         self._type = Message.get_message_type(self.__dict__)
 
     def generate_id(self):
-        setattr(self, "id", randint(0, 65535))
+        setattr(self, "id", randint(0, 655350))
         return self.id
 
     def type(self):
@@ -144,14 +152,16 @@ class Message(object):
         """
         data_dict = self.to_dict()
         if pretty:
-            return json.dumps(data_dict, sort_keys=True, indent=2)
+            return json.dumps(
+                data_dict, sort_keys=True, indent=2)
         return json.dumps(data_dict, sort_keys=True)
 
     def to_dict(self):
         """
         to_dict will clean all protected and private properties
         """
-        return {k: self.__dict__[k] for k in self.__dict__ if k.find("_") != 0}
+        return dict(
+            (k, self.__dict__[k]) for k in self.__dict__ if k.find("_") != 0)
 
     def match(self, route):
         """
@@ -171,6 +181,44 @@ class Message(object):
         setattr(self, "query", parse_querystring(querystring))
 
         return copy.deepcopy(self)
+
+    def to_response(self, sign, code=200, data=None):
+        """
+        transform message to response message
+        Notice: this method will return a deepcopy
+        """
+        msg = copy.deepcopy(self)
+        msg.data = data
+
+        setattr(msg, 'code', code)
+        for _ in ["query", "param", "tunnel"]:
+            if not hasattr(msg, _):
+                continue
+            delattr(msg, _)
+
+        if hasattr(msg, 'sign') and isinstance(msg.sign, list):
+            msg.sign.append(sign)
+        else:
+            msg.sign = [sign]
+
+        msg._type = Message.get_message_type(msg.__dict__)
+
+        return msg
+
+    def to_event(self):
+        """
+        get rid of id, sign, tunnel and update message type
+        Notice: this method will return a deepcopy
+        """
+        msg = copy.deepcopy(self)
+        for _ in ["id", "sign", "tunnel", "query", "param"]:
+            if not hasattr(msg, _):
+                continue
+            delattr(msg, _)
+
+        msg._type = Message.get_message_type(msg.__dict__)
+
+        return msg
 
     @staticmethod
     def get_message_type(message):

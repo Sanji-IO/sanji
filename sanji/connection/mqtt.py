@@ -1,71 +1,110 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+from __future__ import print_function
 
 import os
 import sys
 import uuid
 import logging
-import json
+import simplejson as json
 import paho.mqtt.client as mqtt
+from time import sleep
 
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.connection.connection import Connection
 except ImportError as e:
-    print e
-    print "Please check the python PATH for import test module."
+    print(e)
+    print("Please check the python PATH for import test module.")
     exit(1)
 
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.connection.mqtt")
 
 
 class Mqtt(Connection):
+
     """
     Mqtt
     """
-    def __init__(self, broker_ip="127.0.0.1", broker_port=1883,
-                 broker_keepalive=60):
+    def __init__(
+        self,
+        broker_host=os.getenv('BROKER_PORT_1883_TCP_ADDR', "localhost"),
+        broker_port=os.getenv('BROKER_PORT_1883_TCP_PORT', 1883),
+        broker_keepalive=60
+    ):
         # proerties
-        self.tunnel = uuid.uuid4().hex
-        self.broker_ip = broker_ip
+        self.tunnels = {
+            "internel": (uuid.uuid4().hex, None),
+            "model": (None, None),
+            "view": (None, None)
+        }
+        self.broker_host = broker_host
         self.broker_port = broker_port
         self.broker_keepalive = broker_keepalive
         self.client = mqtt.Client()
+        self.connect_delay = 3
 
         # methods
         self.subscribe = self.client.subscribe
         self.unsubscribe = self.client.unsubscribe
+        self.message_callback_add = self.client.message_callback_add
+        self.message_callback_remove = self.client.message_callback_remove
+        self.client.on_log = self.on_log
+
+    def on_log(self, mosq, obj, level, string):
+        pass
 
     def connect(self):
         """
         connect
         """
-        logger.debug("Start connecting to broker")
-        #  TODO: if connect fails it will raise exception
-        self.client.connect(self.broker_ip, self.broker_port,
-                            self.broker_keepalive)
+        _logger.debug("Start connecting to broker")
+        while True:
+            try:
+                self.client.connect(self.broker_host, self.broker_port,
+                                    self.broker_keepalive)
+                break
+            except Exception:
+                _logger.debug(
+                    "Connect failed. wait %s sec" % self.connect_delay)
+                sleep(self.connect_delay)
+
         self.client.loop_forever()
 
     def disconnect(self):
         """
         disconnect
         """
-        logger.debug("Disconnect to broker")
+        _logger.debug("Disconnect to broker")
         self.client.loop_stop()
 
-    def set_tunnel(self, tunnel):
+    def set_tunnel(self, tunnel_type, tunnel, callback=None):
         """
-        set_tunnel(self, tunnel):
+        set_tunnel(self, tunnel_type, tunnel, callback=None):
         """
-        if self.tunnel is not None:
-            logger.debug("Unsubscribe: %s", (self.tunnel,))
-            self.client.unsubscribe(str(self.tunnel))
+        orig_tunnel = self.tunnels.get(tunnel_type, (None, None))[0]
+        if orig_tunnel is not None:
+            _logger.debug("Unsubscribe: %s", (orig_tunnel,))
+            self.client.unsubscribe(str(orig_tunnel))
 
-        self.tunnel = tunnel
-        self.client.subscribe(str(self.tunnel))
-        logger.debug("Subscribe: %s", (self.tunnel,))
+        self.tunnels[tunnel_type] = (tunnel, callback)
+
+        if callback is not None:
+            self.message_callback_add(tunnel, callback)
+
+        self.client.subscribe(str(tunnel))
+        _logger.debug("Subscribe: %s", (tunnel,))
+
+    def set_tunnels(self, tunnels):
+        """
+        set_tunnels(self, tunnels):
+        """
+        for tunnel_type, (tunnel, callback) in tunnels.iteritems():
+            if tunnel is None:
+                continue
+            self.set_tunnel(tunnel_type, tunnel, callback)
 
     def set_on_connect(self, func):
         """

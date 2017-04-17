@@ -2,10 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 import os
-import json
+import simplejson as json
 import logging
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.bundle")
 
 
 class Bundle(object):
@@ -25,11 +25,12 @@ class Bundle(object):
         try:
             with open(json_path) as f:
                 self.profile = json.load(f)
-        except Exception:
-            raise BundleConfigError("Can't load file: %s", (json_path,))
+        except Exception as e:
+            raise BundleConfigError("Can't load file: %s, error: %s",
+                                    (json_path, str(e)))
 
-        logger.debug("Model: %s config has been loaded." %
-                     (self.profile["name"],))
+        _logger.debug("Model: %s config has been loaded." %
+                      (self.profile["name"],))
 
 
 class BundleConfigError(Exception):

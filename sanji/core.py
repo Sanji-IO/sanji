@@ -2,18 +2,22 @@
 # -*- coding: UTF-8 -*-
 
 """
-This is s Sanji Onject
+This is s Sanji Object
 """
 
-from Queue import Empty
-from Queue import Queue
 import inspect
 import logging
 import signal
 import sys
 import os
+import threading
+import re
+import traceback
+from random import random
 from threading import Event
 from threading import Thread
+from time import sleep
+from voluptuous import MultipleInvalid
 
 from sanji.message import Message
 from sanji.message import MessageType
@@ -21,35 +25,48 @@ from sanji.publish import Publish
 from sanji.publish import Retry
 from sanji.router import Router
 from sanji.session import Session
+from sanji.session import TimeoutError
 from sanji.bundle import Bundle
 
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk")
 
 
 class Sanji(object):
     """
     This is for sanji framework.
     """
-    def __init__(self, bundle=None, connection=None, stop_event=Event()):
+    def __init__(self, *args, **kwargs):
+
+        # Setup default options
+        bundle = kwargs.get("bundle", None)
+        connection = kwargs.get("connection", None)
+        stop_event = kwargs.get("stop_event", Event())
+
         if connection is None:
             raise ValueError("Connection is required.")
+
         # Model-related
         bundle_dir = os.path.dirname(inspect.getfile(self.__class__))
         if bundle is None:
             bundle = Bundle(bundle_dir=bundle_dir)
         self.bundle = bundle
         self.stop_event = stop_event
+        self.reg_thread = None
+        self.reg_delay = lambda: random() * 5
 
         # Router-related (Dispatch)
         self.router = Router()
-        self.dispatch_thread_count = 5
-        self.dispatch_thread_list = []
+        self.dispatch_thread_count = 3
+        self.thread_list = []
 
         # Response-related (Resolve)
         self._session = Session()
         self.resolve_thread_count = 1
-        self.resolve_thread_list = []
 
         # Message Bus
         self._conn = connection
@@ -58,25 +75,27 @@ class Sanji(object):
         self.res_queue = Queue()
 
         # Setup callbacks
-        self._conn.set_on_connect(self.on_connect)
-        self._conn.set_on_message(self.on_message)
+        self._conn.set_on_message(self.on_sanji_message)
         self._conn.set_on_connect(self.on_connect)
         self._conn.set_on_publish(self.on_publish)
 
         # Publisher
         self.publish = Publish(self._conn, self._session)
 
-        # Register signal to call stop()
-        signal.signal(signal.SIGINT, self.exit)
+        # Register signal to call stop() (only mainthread could do this)
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            signal.signal(signal.SIGINT, self.exit)
 
         # Auto-register routes
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
         self._register_routes(methods)
 
         # Custom init function
-        logger.debug("Custom init start")
-        self.init()
-        logger.debug("Custom init finish")
+        if hasattr(self, 'init') and \
+           hasattr(self.init, '__call__'):
+            _logger.debug("Custom init start")
+            self.init(*args, **kwargs)
+            _logger.debug("Custom init finish")
 
     def _register_routes(self, methods):
         """
@@ -90,77 +109,123 @@ class Sanji(object):
 
         return methods
 
-    def _dispatch_message(self, stop_event):
+    def _dispatch_message(self):
         """
         _dispatch_message
         """
-        while not stop_event.is_set():
-            try:
-                message = self.req_queue.get(timeout=0.1)
-            except Empty:
-                continue
+        while True:
+            message = self.req_queue.get()
+            if message is None:
+                _logger.debug("_dispatch_message thread is terminated")
+                return
 
-            results = self.router.dispatch(message)
-            if len(results) == 0:
-                error_msg = "Route '%s' not found." % message.resource
-                logger.info(error_msg)
-                logger.debug(message.to_json())
+            if message._type != MessageType.EVENT:
+                self.__dispatch_message(message)
+            elif message._type == MessageType.EVENT:
+                self.__dispatch_event_message(message)
+
+    def __dispatch_event_message(self, message):
+        results = self.router.dispatch(message)
+
+        def ___dispatch(handler, message):
+            args_len = len(inspect.getargspec(handler["callback"]).args)
+            if args_len == 2:
+                handler["callback"](self, result["message"])
+
+        try:
+            for result in results:  # same route
+                map(lambda handler: ___dispatch(handler, result["message"]),
+                    result["handlers"])
+        except Exception as e:
+            _logger.error(e, exc_info=True)
+
+    def __dispatch_message(self, message):
+        results = self.router.dispatch(message)
+        # Request not found
+        if len(results) == 0:
+            error_msg = "Route '%s' not found." % message.resource
+            _logger.info(error_msg)
+            _logger.debug(message.to_json())
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
+            resp(code=404, data={"message": error_msg})
+            return
+
+        def ___dispatch(handler, message, resp):
+            if handler["schema"] is not None:
+                message.data = handler["schema"](message.data)
+            args_len = len(inspect.getargspec(handler["callback"]).args)
+            if args_len >= 3:
+                handler["callback"](self, result["message"], resp)
+
+        try:
+            for result in results:  # same route
                 resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=404, data={"message": error_msg})
-                continue
+                    result["message"], self.bundle.profile["name"])
+                map(lambda handler: ___dispatch(
+                    handler, result["message"], resp
+                    ),
+                    result["handlers"])
+        except Exception as e:
+            _logger.error(e, exc_info=True)
+            resp_data = {"message": "Internal Error."}
 
-            try:
-                for result in results:  # same route
-                    resp = self.publish.create_response(
-                        result["message"], self.bundle.profile["name"])
-                    map(lambda cb: cb(self, result["message"], resp),
-                        result["callbacks"])
-            except Exception as e:
-                logger.warning(e)
-                resp = self.publish.create_response(
-                    message, self.bundle.profile["name"])
-                resp(code=500, data={"message": "Internal Error."})
+            if os.getenv("SANJI_ENV", 'debug') == 'debug':
+                ex_type, ex, tb = sys.exc_info()
+                resp_data["traceback"] = "".join(traceback.format_tb(tb))
 
-        logger.debug("_dispatch_message thread is terminated")
+            resp = self.publish.create_response(
+                message, self.bundle.profile["name"])
 
-    def _resolve_responses(self, stop_event):
+            # if exception is belongs to schema error
+            if isinstance(e, MultipleInvalid):
+                return resp(code=400, data={"message": str(e)})
+
+            return resp(code=500, data=resp_data)
+
+    def _resolve_responses(self):
         """
         _resolve_responses
         """
-        while not stop_event.is_set():
-            try:
-                message = self.res_queue.get(timeout=0.1)
-            except Empty:
-                continue
-            session = self._session.resolve(message.id, message)
-            if session is None:
-                logger.debug("Unknow response. Not for me.")
-        logger.debug("_resolve_responses thread is terminated")
+        while True:
+            message = self.res_queue.get()
+            if message is None:
+                _logger.debug("_resolve_responses thread is terminated")
+                return
+            self.__resolve_responses(message)
+
+    def __resolve_responses(self, message):
+        session = self._session.resolve(message.id, message)
+        if session is None:
+            self.req_queue.put(message.to_event())
 
     def on_publish(self, client, userdata, mid):
         with self._session.session_lock:
             self._session.resolve_send(mid)
 
     def _create_thread_pool(self):
+
+        def stop(queue):
+            def _stop():
+                queue.put(None)
+            return _stop
+
         # create a thread pool
         for _ in range(0, self.dispatch_thread_count):
-            stop_event = Event()
             thread = Thread(target=self._dispatch_message,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-dispatch-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.thread_list.append((thread, stop(self.req_queue)))
 
-        for _ in range(0, 1):
-            stop_event = Event()
+        for _ in range(0, self.resolve_thread_count):
             thread = Thread(target=self._resolve_responses,
-                            name="thread-%s" % _, args=(stop_event,))
+                            name="thread-resolve-%s" % _)
             thread.daemon = True
             thread.start()
-            self.dispatch_thread_list.append((thread, stop_event))
+            self.thread_list.append((thread, stop(self.res_queue)))
 
-        logger.debug("Thread pool is created")
+        _logger.debug("Thread pool is created")
 
     def start(self):
         """
@@ -169,7 +234,6 @@ class Sanji(object):
         def main_thread():
             # create resp, req thread pool
             self._create_thread_pool()
-
             # start connection, this will block until stop()
             self.conn_thread = Thread(target=self._conn.connect)
             self.conn_thread.daemon = True
@@ -177,11 +241,9 @@ class Sanji(object):
 
             # register model to controller...
             self.is_ready.wait()
-            self.deregister()
-            self.register(self.get_profile())
 
             if hasattr(self, 'run'):
-                logger.debug("Start running...")
+                _logger.debug("Start running...")
                 self.run()
 
         # start main_thread
@@ -189,12 +251,15 @@ class Sanji(object):
         self.main_thread.daemon = True
         self.main_thread.start()
 
-        # control this bundle stop or not
-        while not self.stop_event.wait(0.1):
-            pass
+        if threading.current_thread().__class__.__name__ == '_MainThread':
+            # control this bundle stop or not
+            while not self.stop_event.wait(1):
+                sleep(1)
+        else:
+            self.stop_event.wait()
 
         self.stop()
-        logger.debug("Shutdown successfully")
+        _logger.debug("Shutdown successfully")
 
     def exit(self, signum=None, frame=None):
         """
@@ -207,26 +272,26 @@ class Sanji(object):
         """
         exit
         """
-        logger.debug("Bundle [%s] has been shutting down" %
-                     self.bundle.profile["name"])
+        _logger.debug("Bundle [%s] has been shutting down" %
+                      self.bundle.profile["name"])
+
+        if hasattr(self, 'before_stop') and \
+           hasattr(self.before_stop, '__call__'):
+            _logger.debug("Invoking before_stop...")
+            self.before_stop()
+
         self._conn.disconnect()
         self._session.stop()
         self.stop_event.set()
 
         # TODO: shutdown all threads
-        for thread, event in self.dispatch_thread_list:
-            event.set()
-        for thread, event in self.dispatch_thread_list:
+        for thread, stop in self.thread_list:
+            stop()
+        for thread, stop in self.thread_list:
             thread.join()
         self.is_ready.clear()
 
-    def init(self):
-        """
-        This is for user implement
-        """
-        pass
-
-    def on_message(self, client, userdata, msg):
+    def on_sanji_message(self, client, userdata, msg):
         """This function will recevie all message from mqtt
         client
             the client instance for this callback
@@ -239,11 +304,11 @@ class Sanji(object):
         try:
             message = Message(msg.payload)
         except (TypeError, ValueError) as e:
-            logger.debug(e)
+            _logger.error(e, exc_info=True)
             return
 
         if message.type() == MessageType.UNKNOWN:
-            logger.debug("Got an UNKNOWN message, don't dispatch")
+            _logger.debug("Got an UNKNOWN message, don't dispatch")
             return
 
         if message.type() == MessageType.RESPONSE:
@@ -267,9 +332,32 @@ class Sanji(object):
         rc
             the connection result
         """
-        self._conn.set_tunnel(self._conn.tunnel)
-        self.is_ready.set()
-        logger.debug("Connection established with result code %s" % rc)
+        _logger.debug("Connection established with result code %s" % rc)
+
+        if self.reg_thread is not None and self.reg_thread.is_alive():
+            _logger.debug("Joining previous reg_thread")
+            self.reg_thread.join()
+
+        def reg():
+            delay = None
+            if hasattr(self.reg_delay, '__call__'):
+                delay = self.reg_delay()
+            else:
+                delay = self.reg_delay
+
+            sleep(delay)
+            self._conn.set_tunnels(self._conn.tunnels)
+            model_profile = self.get_profile("model")
+            view_profile = self.get_profile("view")
+            self.deregister(model_profile)
+            self.deregister(view_profile)
+            self.register(model_profile)
+            self.register(view_profile)
+            self.is_ready.set()
+
+        self.reg_thread = Thread(target=reg)
+        self.reg_thread.daemon = True
+        self.reg_thread.start()
 
     def register(self, reg_data, retry=True, interval=1, timeout=3):
         """
@@ -284,54 +372,98 @@ class Sanji(object):
             False if no success
             Tunnel if success
         """
-        resp = Retry(target=self.publish.direct.post,
-                     args=("/controller/registration", reg_data,),
-                     kwargs={"timeout": timeout},
-                     options={"retry": retry, "interval": interval})
+        if len(reg_data["resources"]) == 0:
+            _logger.debug("%s no need to register due to no resources" %
+                          (reg_data["name"]))
+            return
+
+        def _register():
+            try:
+                resp = self.publish.direct.post(
+                    "/controller/registration", reg_data)
+                if resp.code == 200:
+                    return resp
+            except TimeoutError:
+                _logger.debug("Register message is timeout")
+
+            return False
+
+        resp = _register()
+        while resp is False:
+            _logger.debug("Register failed.")
+            self.deregister(reg_data)
+            resp = _register()
+
         if resp is None:
-            logger.error("Can\'t not register to controller")
-            sys.exit(1)
+            _logger.error("Can\'t not register to controller")
+            self.stop()
+            return False
 
-        self._conn.set_tunnel(resp.data["tunnel"])
-        logger.info("Register successfully tunnel: %s"
-                    % (resp.data["tunnel"],))
+        self._conn.set_tunnel(
+            reg_data["role"], resp.data["tunnel"], self.on_sanji_message)
+        self.bundle.profile["currentTunnels"] = [
+            tunnel for tunnel, callback in self._conn.tunnels.items()]
+        self.bundle.profile["regCount"] = \
+            self.bundle.profile.get("reg_count", 0) + 1
 
-    def deregister(self, retry=True, interval=1, timeout=3):
-        data = {
-            "name": self.bundle.profile["name"]
-        }
+        _logger.debug("Register successfully %s tunnel: %s"
+                      % (reg_data["name"], resp.data["tunnel"],))
 
+    def deregister(self, reg_data, retry=True, interval=1, timeout=3):
+        """
+        Deregister model/view of this bundle
+        """
         Retry(target=self.publish.direct.delete,
-              args=("/controller/registration", data,),
+              args=("/controller/registration", reg_data,),
               kwargs={"timeout": timeout},
               options={"retry": retry, "interval": interval})
-        logger.info("Deregister successfully tunnel: %s" %
-                    (self._conn.tunnel,))
+        _logger.debug("Deregister successfully %s tunnel: %s" %
+                      (reg_data["name"],
+                       self._conn.tunnels[reg_data["role"]][0],))
 
-    def get_profile(self):
-        self.bundle.profile["tunnel"] = self._conn.tunnel
-        self.bundle.profile["resources"] = [_["resource"] for _ in
-                                            self.bundle.profile["resources"]]
-        return self.bundle.profile
+    def get_profile(self, role="model"):
+        profile = dict((k, v) for k, v in self.bundle.profile.items())
+        profile["tunnel"] = self._conn.tunnels["internel"][0]
+        profile["resources"] = []
+        profile["role"] = role
+        profile["name"] = "%s%s" % \
+            (profile["name"], '' if role == self.bundle.profile["role"]
+                              else '-' + role,)
+
+        for _ in self.bundle.profile["resources"]:
+            if _.get("role", self.bundle.profile["role"]) != role:
+                continue
+            profile["resources"].append(re.sub(r":(\w+)", r"+", _["resource"]))
+
+        return profile
 
 
-def Route(resource=None, methods=None):
+def Route(resource=None, methods=["get", "post", "put", "delete"],
+          schema=None):
     """
     route
     """
     def _route(func):
         def wrapper(self, *args, **kwargs):
+            # "test" argument means no wrap func this time,
+            # return original func immediately.
+            if kwargs.get("test", False):
+                kwargs.pop("test")
+                func(self, *args, **kwargs)
+
             _methods = methods
             if isinstance(methods, str):
                 _methods = [methods]
             route = self.router.route(resource)
             for method in _methods:
-                getattr(route, method)(func)
+                getattr(route, method)(func, schema)
         # Ordered by declare sequence
         # http://stackoverflow.com/questions/4459531/how-to-read-class-attributes-in-the-same-order-as-declared
         f_locals = sys._getframe(1).f_locals
         _order = len([v for v in f_locals.itervalues()
-                     if hasattr(v, '__call__') and v.__name__ == "wrapper"])
+                     if hasattr(v, '__call__') and
+                     hasattr(v, '__name__') and
+                     v.__name__ == "wrapper"])
         wrapper.__dict__["_order"] = _order
         return wrapper
     return _route

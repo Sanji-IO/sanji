@@ -2,8 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 
-from collections import deque
 import logging
+import uuid
+
+from collections import deque
 from threading import Event
 from threading import RLock
 from threading import Thread
@@ -13,7 +15,7 @@ from time import time
 from sanji.message import Message
 
 
-logger = logging.getLogger()
+_logger = logging.getLogger("sanji.sdk.session")
 
 
 class Status(object):
@@ -45,6 +47,7 @@ class Session(object):
     Session
     """
     def __init__(self):
+        self.aging_unit = 0.5
         self.session_list = {}
         self.session_lock = RLock()
         self.timeout_queue = deque([], maxlen=10)
@@ -55,15 +58,15 @@ class Session(object):
 
     def stop(self):
         self.stop_event.set()
-        self.thread_aging.join()
+        if self.thread_aging.is_alive():
+            self.thread_aging.join()
 
     def resolve(self, msg_id, message=None, status=Status.RESOLVED):
         with self.session_lock:
             session = self.session_list.pop(msg_id, None)
             if session is None:
-                # TODO: Warning message, nothing can be resolved.
-                logger.debug("Nothing can be resolved message id: %s" % msg_id)
                 return
+
             session["resolve_message"] = message
             session["status"] = status
             session["is_resolved"].set()
@@ -76,7 +79,7 @@ class Session(object):
                     session["status"] = Status.SENT
                     session["is_published"].set()
                     return session
-            logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
+            _logger.debug("Nothing can be resolved mid_id: %s" % mid_id)
             return None
 
     def create(self, message, mid=None, age=60, force=True):
@@ -86,6 +89,8 @@ class Session(object):
                 due to duplicate message id
         """
         with self.session_lock:
+            if not hasattr(message, "id"):
+                message.__setattr__("id", "event-%s" % (uuid.uuid4().hex,))
             if self.session_list.get(message.id, None) is not None:
                 if force is False:
                     raise SessionError("Message id: %s duplicate!" %
@@ -115,14 +120,13 @@ class Session(object):
                     session = self.session_list[session_id]
                     # TODO: use system time diff to decrease age
                     #       instead of just - 1 ?
-                    session["age"] = session["age"] - 0.5
-
+                    session["age"] = session["age"] - self.aging_unit
                     # age > 0
                     if session["age"] > 0:
                         continue
 
                     # age <= 0, timeout!
-                    logger.debug("Message timeout id:%s", session_id)
+                    _logger.debug("Message timeout id:%s", session_id)
                     if session["is_published"].is_set():
                         session["status"] = Status.SEND_TIMEOUT
                     else:
@@ -133,10 +137,10 @@ class Session(object):
                     self.timeout_queue.append(session)
 
                 # remove all timeout session
-                self.session_list = {k: self.session_list[k] for k
-                                     in self.session_list
-                                     if self.session_list[k]["status"]
-                                     != Status.SEND_TIMEOUT
-                                     or self.session_list[k]["status"]
-                                     != Status.RESPONSE_TIMEOUT}
-            sleep(0.5)
+                self.session_list = dict((k, self.session_list[k]) for k
+                                         in self.session_list
+                                         if self.session_list[k]["status"] !=
+                                         Status.SEND_TIMEOUT or
+                                         self.session_list[k]["status"] !=
+                                         Status.RESPONSE_TIMEOUT)
+            sleep(self.aging_unit)

@@ -19,9 +19,15 @@ class Connection(object):
         """
         raise NotImplementedError("Should have implemented this")
 
-    def set_tunnel(self, tunnel):
+    def set_tunnel(self, type, tunnel, callback=None):
         """
         set tunnel
+        """
+        raise NotImplementedError("Should have implemented this")
+
+    def set_tunnels(self, tunnels):
+        """
+        set tunnels
         """
         raise NotImplementedError("Should have implemented this")
 

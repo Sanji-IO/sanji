@@ -11,10 +11,21 @@
   "hook": [],
   "dependencies": {},
   "repository": "",
+  "role": "model",
   "resources": [
     {
       "methods": "get",
       "resource": "/sanji/bundles"
+    },
+    {
+      "resource": "/sanji/test/:id"
+    },
+    {
+      "resource": "/sanji/test/:id/test"
+    },
+    {
+      "role": "view",
+      "resource": "/events"
     }
   ]
 }

@@ -1,14 +1,22 @@
-import unittest
+from __future__ import print_function
+
 import sys
 import os
+
+from mock import Mock
+
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     import sanji.router as router
     from sanji.message import Message
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 
@@ -17,7 +25,7 @@ class TestFunctions(unittest.TestCase):
     def test_compile_resource(self):
         self.assertEqual(
             router.compile_resource('/abc/:id').pattern,
-            "^abc/(?P<id>\w+?)(\?(?P<querystring>.*))?$"
+            "^abc/(?P<id>[\w-]+?)(\?(?P<querystring>.*))?$"
         )
 
         self.assertEqual(
@@ -43,10 +51,10 @@ class TestRouteClass(unittest.TestCase):
         self.assertEqual(len(self.route.handlers), 0)
 
         def callback1():
-            print "I am test callback1"
+            print("I am test callback1")
 
         def callback2():
-            print "I am test callback2"
+            print("I am test callback2")
 
         self.route.get(callback1)
         self.assertEqual(self.route.handlers[0]['method'], "get")
@@ -66,7 +74,7 @@ class TestRouteClass(unittest.TestCase):
         self.assertTrue(hasattr(func, "__call__"))
 
         def callback():
-            print "test callback"
+            print("test callback")
         func(callback)
 
         self.assertEqual(len(self.route.handlers), 1)
@@ -81,7 +89,7 @@ class TestRouteClass(unittest.TestCase):
         )
 
         def callback(req):
-            print req
+            print(req)
 
         self.route.get(callback)
         message = Message(request)
@@ -119,26 +127,10 @@ class TestRouterClass(unittest.TestCase):
         self.assertEqual(len(self.router.routes), 0)
 
         def callback1():
-            print "I am test callback1"
+            print("I am test callback1")
 
         def callback2():
-            print "I am test callback2"
-
-        # self.router.get("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").get(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.post("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").post(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.put("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").put(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
-
-        # self.router.delete("/test/resource/:id", callback1)
-        # route = router.Route("/test/resource/:id").delete(callback1)
-        # self.assertItemsEqual(self.router.routes["/test/resource/:id"].handlers, route.handlers)
+            print("I am test callback2")
 
     def test_dispatch(self):
         request = {
@@ -148,57 +140,49 @@ class TestRouterClass(unittest.TestCase):
             "data": {}
         }
 
-        request_data = {
-            "uri": "test/resource/112?aaa=bbb",
-            "method": "get",
-            "param": {
-                "id": "112"
-            },
-            "query": {
-                "aaa": "bbb"
-            },
-            "data": {}
-        }
-
-        def callback(method):
-            def _cb():
-                return method
-            return _cb
-
-        # for times in range(1, 3):
-        self.router.post("/test/resource/", callback("post_no_id"))
-        self.router.route("/test/resource/:id") \
-            .get(callback("get")) \
-            .post(callback("post")) \
-            .delete(callback("delete")) \
-            .put(callback("put"))
-
-        for method in ["get", "post", "delete", "put"]:
-            request["method"] = method
-            request_data["method"] = method
-            result = self.router.dispatch(Message(request))
-            self.assertEqual(method, result[0]["callbacks"][0]())
-
-        request = {
-            "id": 3345678,
-            "resource": "/test/resource/",
-            "method": "post",
-            "data": {}
-        }
-
+        # case 1: normal
+        callback = Mock(return_value="case1")
+        self.router.post("/test/resource", callback)
+        request["resource"] = "/test/resource/"
+        request["method"] = "post"
         result = self.router.dispatch(Message(request))
-        self.assertEqual("post_no_id", result[0]["callbacks"][0]())
+        self.assertEqual(1, len(result))
+        self.assertEqual(1, len(result[0]["handlers"]))
+        self.assertEqual(result[0]["handlers"][0]["callback"](), "case1")
+        callback.assert_called_once_with()
 
+        # case 2: using route method
+        callback2 = Mock(return_value="case2")
+        self.router.route("/test/dunplicate").post(callback2)
+        self.router.route("/test/dunplicate/:id").post(callback2)
+        request["resource"] = "/test/dunplicate/1234"
+        result = self.router.dispatch(Message(request))
+        self.assertEqual(1, len(result))
+        self.assertEqual(1, len(result[0]["handlers"]))
+        self.assertEqual(result[0]["handlers"][0]["callback"](), "case2")
+        callback2.assert_called_once_with()
+
+        # case 3: not found
         request = {
             "id": 698978,
             "resource": "/test/resource/",
             "method": "get",
             "data": {}
         }
-
         result = self.router.dispatch(Message(request))
         self.assertEqual(0, len(result))
-        # test dispatch threading
+
+    def test_dispatch_multi_params(self):
+        request = {
+            "id": 3345678,
+            "resource": "/multi_params/1_1/2-2",
+            "method": "post",
+            "data": {}
+        }
+        callback = Mock(return_value="test_dispatch_multi_params")
+        self.router.route("/multi_params/:id/:u_id").post(callback)
+        result = self.router.dispatch(Message(request))
+        self.assertEqual(1, len(result))
 
     def test_get_routes(self):
         def func():

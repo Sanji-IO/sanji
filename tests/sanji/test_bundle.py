@@ -1,20 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+from __future__ import print_function
 
 import os
 import sys
 import json
-import unittest
 
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.bundle import Bundle
     from sanji.bundle import BundleConfigError
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 # setup mockup bundle_dir

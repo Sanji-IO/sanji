@@ -1,15 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+from __future__ import print_function
 
-from Queue import Empty
-from Queue import Queue
+from mock import Mock
+from mock import patch
+from mock import ANY
 import os
 import sys
 from threading import Event
 from threading import Thread
-import unittest
 import logging
+from voluptuous import Schema
+from voluptuous import Required
+from voluptuous import All
+from voluptuous import Length
+from voluptuous import Range
+from voluptuous import REMOVE_EXTRA
 
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
+
+try:
+    from queue import Empty
+except ImportError as e:
+    print(e)
+    from Queue import Empty
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -18,10 +35,11 @@ try:
     from sanji.bundle import Bundle
     from sanji.bundle import BundleConfigError
     from sanji.message import Message
-    from sanji.session import Status
-    from connection_mockup import ConnectionMockup
+    from sanji.message import MessageType
+    from sanji.connection.mockup import Mockup
 except ImportError as e:
-    print "Please check the python PATH for import test module."
+    print(e)
+    print("Please check the python PATH for import test module.")
     exit(1)
 
 bundle_dir = os.path.normpath(os.path.realpath(__file__) +
@@ -64,15 +82,25 @@ class TestModel(Sanji):
     def put2(self, message, response):
         pass
 
+    @Route(resource="/mockup_resource", methods="get")
+    def mockup_handler(self, message, response):
+        response(message)
+
+    def before_stop(self):
+        pass
+
     def run(self):
         pass
+
+    def init(self, *args, **kwargs):
+        self.test_variable = kwargs.get("test_variable", None)
 
 
 class TestRouteFunction(unittest.TestCase):
 
     def test_route(self):
         bundle = Bundle(bundle_dir=bundle_dir)
-        test_model = TestModel(connection=ConnectionMockup(),
+        test_model = TestModel(connection=Mockup(),
                                bundle=bundle)
         routes = test_model.router.routes
         self.assertIn("/model/test/:id", routes)
@@ -82,12 +110,18 @@ class TestRouteFunction(unittest.TestCase):
         self.assertIn("/model/:id", routes)
         self.assertEqual(3, len(routes["/model/:id"].handlers))
 
+        # while test=True don't warp function
+        def resp(test):
+            self.assertTrue(test)
+        test_model.mockup_handler(True, resp, test=True)
+
 
 class TestSanjiClass(unittest.TestCase):
 
-    def setUp(self):
+    @patch("sanji.session.Thread")
+    def setUp(self, Thread):
         self.bundle = Bundle(bundle_dir=bundle_dir)
-        self.test_model = TestModel(connection=ConnectionMockup(),
+        self.test_model = TestModel(connection=Mockup(),
                                     bundle=self.bundle)
 
     def tearDown(self):
@@ -97,25 +131,23 @@ class TestSanjiClass(unittest.TestCase):
 
     def test_init(self):
         with self.assertRaises(BundleConfigError):
-            TestModel(connection=ConnectionMockup())
+            TestModel(connection=Mockup())
 
         with self.assertRaises(ValueError):
             TestModel()
 
         event = Event()
         bundle = Bundle(bundle_dir=bundle_dir)
-        tm = TestModel(bundle=bundle, connection=ConnectionMockup(),
-                       stop_event=event)
-        thread = Thread(target=tm.start)
-        thread.daemon = True
-        thread.start()
-        thread.join(0.2)
-        event.set()
+        tm = TestModel(bundle=bundle, connection=Mockup(),
+                       stop_event=event, test_variable=True)
+
+        # bypassing test_variable to init()
+        self.assertTrue(tm.test_variable)
 
     def test_on_publish(self):
         self.test_model.on_publish(None, None, 1)
 
-    def test_on_message(self):
+    def test_on_sanji_message(self):
         # Normal message
         class MyMessage(object):
             def __init__(self, payload):
@@ -133,10 +165,9 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = Message(message.payload)
-        self.test_model.on_message(None, None, message)
-        data = self.test_model.req_queue.get()
-        self.assertEqual(data.to_dict(), smessage.to_dict())
+        with patch.object(self.test_model, "req_queue") as req_queue:
+            self.test_model.on_sanji_message(None, None, message)
+            req_queue.put.assert_called_once_with(ANY)
 
         # Response
         message2 = MyMessage({
@@ -149,133 +180,147 @@ class TestSanjiClass(unittest.TestCase):
                 "test": "OK"
             }
         })
-        smessage = Message(message2.payload)
-        self.test_model.on_message(None, None, message2)
-        data = self.test_model.res_queue.get()
-        self.assertEqual(data.to_dict(), smessage.to_dict())
+        with patch.object(self.test_model, "res_queue") as res_queue:
+            self.test_model.on_sanji_message(None, None, message2)
+            res_queue.put.assert_called_once_with(ANY)
 
         # Non-JSON String message
         message = MyMessage(None)
-        self.test_model.on_message(None, None, message)
+        self.test_model.on_sanji_message(None, None, message)
         with self.assertRaises(Empty):
-            self.test_model.req_queue.get(timeout=0.1)
+            self.test_model.req_queue.get(timeout=0.001)
 
         # UNKNOW TYPE message
         message = MyMessage("{}")
-        self.test_model.on_message(None, None, message)
+        self.test_model.on_sanji_message(None, None, message)
         with self.assertRaises(Empty):
-            self.test_model.req_queue.get(timeout=0.1)
+            self.test_model.req_queue.get(timeout=0.001)
 
     def test__dispatch_message(self):  # noqa
-        queue = Queue()
-        this = self
-        # message1
-        message1 = Message({
-            "id": 1234,
-            "method": "get",
-            "resource": "/test__dispatch_message",
-            "data": {
-                "test": "OK"
-            }
-        })
+        resp = Mock()
+        self.test_model.publish.create_response = Mock(return_value=resp)
 
-        def create_mock_handler(index):
-            def _mock_handler(self, message, response):
-                queue.put(index)
+        # case 1: not found
+        with patch.object(self.test_model.router, "dispatch") as dispatch:
+            dispatch.return_value = []
+            m = Message({"resource": "/"})
+            self.test_model._Sanji__dispatch_message(m)
+            resp.assert_called_once_with(
+                code=404, data={"message": ANY})
 
-            return _mock_handler
+        # case 2: normal
+        def cb(self, message, response):
+            response(code=200, data=message.to_dict())
 
-        for _ in range(0, 10):
-            self.test_model.router.get("/test__dispatch_message",
-                                       create_mock_handler(_))
+        resp.reset_mock()
+        with patch.object(self.test_model.router, "dispatch") as dispatch:
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": cb,
+                    "method": "put",
+                    "reentrant": False,
+                    "schema": None
+                }],
+                "message": Message({})
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(code=200, data={})
 
-        # message2
-        message2 = Message({
-            "id": 3456,
-            "method": "get",
-            "resource": "/test__dispatch_message/12345",
-            "data": {
-                "test": "OK"
-            }
-        })
+        # case 3: internal error
+            resp.reset_mock()
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": Mock(side_effect=Exception("TEST"))
+                }],
+                "message": Message({})
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(
+                code=500,
+                data={"message": "Internal Error.", "traceback": ANY})
 
-        def mock_handler_2(self, message, response):
-            this.assertEqual(12345, int(message.param["id"]))
+        # case 4: schema
+            resp.reset_mock()
+            schema = Schema({
+                Required('q'): All(str, Length(min=1)),
+                Required('per_page', default=5): All(
+                    int, Range(min=1, max=20)),
+                'page': All(int, Range(min=0)),
+            })
 
-        self.test_model.router.get("/test__dispatch_message/:id",
-                                   mock_handler_2)
+            def schema_cb(self, message, response):
+                response(code=200, data=message.to_dict())
 
-        # message3 - Not Found
-        message3 = Message({
-            "id": 3456,
-            "method": "get",
-            "resource": "/not_found/12345"
-        })
+            m = Message({
+                "data": {
+                    "q": "abc",
+                    "per_page": 5,
+                    "page": 12
+                }
+            })
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": schema_cb,
+                    "schema": schema
+                }],
+                "message": m
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(code=200,
+                                         data=m.to_dict())
 
-        # put messages in req_queue queue
-        self.test_model.req_queue.put(message1)
-        self.test_model.req_queue.put(message2)
-        self.test_model.req_queue.put(message3)
+        # case 5: schema error
+            resp.reset_mock()
+            m = Message({
+                "data": {
+                    "q": "abc",
+                    "per_page": 5,
+                    "page": "12"  # change this to str
+                }
+            })
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": schema_cb,
+                    "schema": schema
+                }],
+                "message": m
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(
+                code=400,
+                data={"message":
+                      "expected int for dictionary value @ data['page']"})
 
-        # start dispatch messages
-        event = Event()
-        thread = Thread(target=self.test_model._dispatch_message,
-                        args=(event,))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        # let response onthefly
-        for session in self.test_model._session.session_list.itervalues():
-            session["status"] = Status.SENT
-            session["is_published"].set()
-
-        while self.test_model.req_queue.empty() is False:
-            pass
-
-        event.set()
-        thread.join()
-
-        # check dispatch sequence
-        current_index = -1
-        while queue.empty() is False:
-            index = queue.get()
-            self.assertLess(current_index, index)
-            current_index = index
-
-        # check internal error response
-        def mock_handler_3(self, message, response):
-            raise Exception("Error")
-
-        self.test_model.router.get("/test_broken_response",
-                                   mock_handler_3)
-
-        # message4 - Not Found
-        message4 = Message({
-            "id": 1234,
-            "method": "get",
-            "resource": "/test_broken_response"
-        })
-        self.test_model.req_queue.put(message4)
-        # start dispatch messages
-        event = Event()
-        thread = Thread(target=self.test_model._dispatch_message,
-                        args=(event,))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        # let response onthefly
-        for session in self.test_model._session.session_list.itervalues():
-            session["status"] = Status.SENT
-            session["is_published"].set()
-
-        while self.test_model.req_queue.empty() is False:
-            pass
-
-        event.set()
-        thread.join()
+        # case 6: schema with extra
+            resp.reset_mock()
+            schema_extra = Schema({
+                Required('q'): All(str, Length(min=1))
+            }, extra=REMOVE_EXTRA)
+            m = Message({
+                "data": {
+                    "q": "abc",
+                    "extram_data": "remove_me"  # extra data
+                }
+            })
+            dispatch.return_value = [{
+                "handlers": [{
+                    "callback": schema_cb,
+                    "schema": schema_extra
+                }],
+                "message": m
+            }]
+            self.test_model._Sanji__dispatch_message(None)
+            resp.assert_called_once_with(
+                code=200,
+                data={
+                    "data": {
+                        "q": "abc"
+                    }
+                }
+            )
 
     def test__resolve_responses(self):
-        # prepare messages
+        """ It should put message into req_queue if response is not for me """
         msg = Message({
             "id": 3456,
             "code": 200,
@@ -287,22 +332,29 @@ class TestSanjiClass(unittest.TestCase):
         self.test_model.res_queue.put(msg)
 
         # start dispatch messages
-        event = Event()
-        thread = Thread(target=self.test_model._resolve_responses,
-                        args=(event,))
+        thread = Thread(target=self.test_model._resolve_responses)
         thread.daemon = True
         thread.start()
 
         while self.test_model.res_queue.empty() is False:
             pass
 
-        event.set()
+        event_msg_ans = Message({
+            "code": 200,
+            "method": "get",
+            "resource": "/not_found/12345",
+            "data": None
+        }, generate_id=False)
+        event_msg = self.test_model.req_queue.get()
+        self.assertEqual(event_msg_ans.to_dict(), event_msg.to_dict())
+        self.assertEqual(event_msg.type(), MessageType.EVENT)
+        self.test_model.res_queue.put(None)
         thread.join()
 
     def test_register_routes(self):
         def func_maker(name, order):
             def wrapper():
-                print name
+                print(name)
             wrapper.__dict__["_order"] = order
             return wrapper
 
@@ -321,167 +373,86 @@ class TestSanjiClass(unittest.TestCase):
             self.assertLessEqual(previous._order, func._order)
 
     def test_start(self):
-        del_msg = Message({
-            "id": 2266,
-            "code": 200,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["controller"]
-        })
+        def run():
+            self.test_model.stop_event.set()
 
-        msg = Message({
-            "id": 1234,
-            "code": 200,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["controller"],
-            "data": {
-                "tunnel": "good_luck_sanji"
-            }
-        })
-        thread = Thread(target=self.test_model.start)
-        thread.daemon = True
-        thread.start()
-        thread.join(0.1)
-        for msg_id in self.test_model._session.session_list:
-            del_msg.id = msg_id
-            self.test_model.res_queue.put(del_msg)
-        thread.join(0.1)
-        for msg_id in self.test_model._session.session_list:
-            msg.id = msg_id
-            self.test_model.res_queue.put(msg)
-
-        thread.join(1)
-        self.assertFalse(thread.is_alive())
+        self.test_model._create_thread_pool = Mock()
+        self.test_model.is_ready.set()
+        self.test_model.deregister = Mock(return_value=True)
+        self.test_model.register = Mock(return_value=True)
+        self.test_model.stop = Mock()
+        self.test_model.run = run
 
     def test_register(self):
-        this = self
-        self.test_model._create_thread_pool()
-        # prepare ressponse messages
-        msg = Message({
-            "id": 1234,
+        post = Mock(return_value=Message({
             "code": 200,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["test"],
             "data": {
-                "tunnel": "good_luck_sanji"
+                "tunnel": 1234
             }
-        })
+        }))
+        set_tunnel = Mock()
+        self.test_model.stop = Mock()
+        self.test_model.deregister = Mock()
+        self.test_model.publish.direct.post = post
+        self.test_model._conn.set_tunnel = set_tunnel
+        # case 1: normal
 
-        msg_failed = Message({
-            "id": 1234,
-            "code": 500,
-            "method": "post",
-            "resource": "/controller/registration",
-            "sign": ["test"],
-            "data": {}
-        })
+        reg_data = {
+            "name": "test_register",
+            "role": "model",
+            "resources": ["/abc"]
+        }
+        self.test_model.register(reg_data)
+        set_tunnel.assert_called_once_with("model", 1234, ANY)
 
-        reg_data = Message({
-            "id": 1234,
-            "method": "post",
-            "resource": "/controller/registration",
-            "name": "test",
-            "data": {
-                "tunnel": "Temp_tunnel_for_test",
-                "description": "This is a model without description.",
-                "hook": [],
-                "role": "model",
-                "resources": [
-                    "/network/ethernet",
-                    "/network/cellular"
-                ]
-            }
-        })
-        # register OK
-        thread = Thread(target=self.test_model.register, args=(reg_data,))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg)
-        thread.join(5)
-        self.assertFalse(thread.is_alive())
+    def test_deregister(self):
+        name = self.test_model.bundle.profile["name"]
+        reg_data = {
+            "name": name,
+            "role": "model",
+            "resources": ["/abc"]
+        }
 
-        # register with failed
-        thread = Thread(target=self.test_model.register,
-                        args=(reg_data, True, 0))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg)
-        thread.join(5)
-        self.assertFalse(thread.is_alive())
+        self.test_model._conn.tunnels["view"] = "view_tunnel"
+        self.test_model._conn.tunnels["model"] = "model_tunnel"
+        with patch("sanji.core.Retry") as Retry:
+            Retry.return_value = None
+            retry = False
+            timeout = 2
+            interval = 1
+            self.test_model.deregister(
+                reg_data=reg_data, retry=retry,
+                interval=interval, timeout=timeout)
+            Retry.assert_called_once_with(
+                target=self.test_model.publish.direct.delete,
+                args=("/controller/registration", reg_data,),
+                kwargs={"timeout": timeout},
+                options={"retry": retry, "interval": interval})
 
-        # register with failed
-        thread = Thread(target=self.test_model.register,
-                        args=(reg_data, False))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
-
-        # register with failed and raise error
-        thread = Thread(target=self.test_model.register,
-                        args=(reg_data, 2))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(1)
-        self.assertFalse(thread.is_alive())
-
-        class ThreadTest(Thread):
-
-            def __init__(self, exception_class=False, *args, **kwargs):
-                Thread.__init__(self, *args, **kwargs)
-                self.run_old = self.run
-
-                def run_except(*args, **kwargs):
-                    if exception_class is False:
-                        self.run_old(*args, **kwargs)
-                        return
-
-                    with this.assertRaises(exception_class):
-                        self.run_old(*args, **kwargs)
-                self.run = run_except
-
-        # register with failed and raise error
-        thread = ThreadTest(target=self.test_model.register,
-                            args=(reg_data, "abc"),
-                            exception_class=TypeError)
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.test_model.res_queue.put(msg_failed)
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
-
-        # register with failed and raise error
-        thread = ThreadTest(target=self.test_model.register,
-                            args=(reg_data, 0, 0, 0.1))
-        thread.daemon = True
-        thread.start()
-        thread.join(0.5)
-        self.assertFalse(thread.is_alive())
-
-    def get_profile(self):
+    def test_get_profile_model(self):
         """
         TODO: needs final controller registration spec to vaild this output
         """
-        self.test_model.get_model_profile()
+        profile = self.test_model.get_profile()
+        for resource in profile["resources"]:
+            self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 3)
+
+    def test_get_profile_view(self):
+        profile = self.test_model.get_profile(role="view")
+        for resource in profile["resources"]:
+            self.assertEquals(resource.find(":"), -1)
+        self.assertEqual(len(profile["resources"]), 1)
 
     def test_exit(self):
         with self.assertRaises(SystemExit):
             self.test_model.exit()
+
+    def test__create_thread_pool(self):
+        self.test_model._create_thread_pool()
+        self.assertEqual(self.test_model.dispatch_thread_count +
+                         self.test_model.resolve_thread_count,
+                         len(self.test_model.thread_list))
 
 if __name__ == "__main__":
     FORMAT = '%(asctime)s - %(levelname)s - %(lineno)s - %(message)s'

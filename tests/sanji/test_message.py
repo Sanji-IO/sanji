@@ -1,7 +1,14 @@
-import unittest
+from __future__ import print_function
+
 import json
 import sys
 import os
+from decimal import Decimal
+
+if sys.version_info >= (2, 7):
+    import unittest
+else:
+    import unittest2 as unittest
 
 try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
@@ -11,8 +18,8 @@ try:
     from sanji.message import trim_resource
     from sanji.router import Route
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)"
+          % __file__)
     exit(1)
 
 
@@ -220,12 +227,32 @@ class TestMessageClass(unittest.TestCase):
         route.get(get)
         self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
 
+        msg = {
+            "id": 123,
+            "method": "get",
+            "resource": "/model"
+        }
+
+        matched_msg = {
+            "_type": 2,
+            "resource": "/model",
+            "query": {},
+            "id": 123,
+            "param": {},
+            "method": "get"
+        }
+
+        sanjimsg = Message(msg)
+        route = Route("/model")
+        route.get(get)
+        self.assertEqual(sanjimsg.match(route).__dict__, matched_msg)
+
     def test_generate_id(self):
         msg = Message({})
         msg_id = msg.generate_id()
         self.assertEqual(msg.id, msg_id)
-        self.assertTrue(msg.id < 65535)
-        self.assertTrue(msg.id > 0)
+        self.assertGreater(msg.id, 0)
+        self.assertLess(msg.id, 655350)
 
     def test_init(self):
         msg = Message({
@@ -234,7 +261,7 @@ class TestMessageClass(unittest.TestCase):
         }, generate_id=True)
 
         self.assertGreater(msg.id, 0)
-        self.assertLess(msg.id, 65535)
+        self.assertLess(msg.id, 655350)
         self.assertEqual(msg.type(), MessageType.REQUEST)
 
         msg_noid = Message({
@@ -261,6 +288,17 @@ class TestMessageClass(unittest.TestCase):
         for prop in json.loads(msg.to_json(pretty=False)):
             self.assertNotEqual(prop.find("_"), 0)
 
+    def test_to_json_with_decimal_type(self):
+        msg = Message({
+                "decimalType": Decimal('0.000001')
+            })
+        for prop in json.loads(msg.to_json()):
+            self.assertNotEqual(prop.find("_"), 0)
+        for prop in json.loads(msg.to_json(pretty=False)):
+            self.assertNotEqual(prop.find("_"), 0)
+
+        self.assertEquals(
+            msg.to_json(pretty=False), "{\"decimalType\": 0.000001}")
 
 if __name__ == "__main__":
     unittest.main()
