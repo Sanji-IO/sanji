@@ -124,7 +124,7 @@ class Mqtt(Connection):
         """
         self.client.on_publish = func
 
-    def publish(self, topic="/controller", qos=2, payload=None):
+    def publish(self, topic="/controller", qos=0, payload=None):
         """
         publish(self, topic, payload=None, qos=0, retain=False)
         Returns a tuple (result, mid), where result is MQTT_ERR_SUCCESS to
