@@ -2,6 +2,7 @@ import simplejson as json
 import copy
 import os
 import random
+import six
 from random import randint
 
 try:
@@ -119,7 +120,7 @@ class Message(object):
     Message
     """
     def __init__(self, message, generate_id=False):
-        if isinstance(message, str) or isinstance(message, unicode):
+        if isinstance(message, six.string_types):
             try:
                 message = json.loads(message)
             except Exception:
