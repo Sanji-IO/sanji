@@ -303,9 +303,9 @@ class TestModelInitiatorClass(unittest.TestCase):
         rc = self.model_initiator.stop_backup()
         self.assertTrue(rc)
 
-        self.model_initaitor.db_type = "json"
-        self.model_initaitor.factory_json_db_path = "/1231231235566"
-        result = self.model_initaitor.create_db()
+        self.model_initiator.db_type = "json"
+        self.model_initiator.factory_json_db_path = "/1231231235566"
+        result = self.model_initiator.create_db()
         self.assertFalse(result)
 
 
