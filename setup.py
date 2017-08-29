@@ -7,9 +7,10 @@ def read(*paths):
     with open(os.path.join(*paths), 'r') as f:
         return f.read()
 
+
 setup(
     name="sanji",
-    version="1.0.1",
+    version="1.0.2",
     description="Sanji Framework SDK",
     long_description=read('README.rst'),
     url="https://github.com/Sanji-IO/sanji",
