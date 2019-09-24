@@ -131,7 +131,7 @@ class Message(object):
             raise TypeError("Message must be JSON string or Dict")
 
         # put all prop into object
-        for (prop, value) in message.iteritems():
+        for (prop, value) in six.iteritems(message):
             setattr(self, prop, value)
 
         if generate_id is True:

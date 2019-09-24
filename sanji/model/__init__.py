@@ -1,6 +1,7 @@
 from sanji.model_initiator import ModelInitiator
 from voluptuous import Schema
 from threading import Event
+from six import moves
 
 
 class ModelBatch(object):
@@ -161,7 +162,7 @@ class Model(object):
                 MultipleInvalid: If input object is invaild
         """
         newObj = self.validation(newObj)
-        for index in xrange(0, len(self.model.db)):
+        for index in moves.range(0, len(self.model.db)):
             if self.model.db[index]["id"] != id:
                 continue
 

@@ -3,6 +3,7 @@ This is router class
 """
 
 import re
+import six
 from sanji.message import trim_resource
 
 
@@ -126,7 +127,7 @@ class Router(object):
 
     def get_routes(self):
         routes = {}
-        for resource, route in self.routes.iteritems():
+        for resource, route in six.iteritems(self.routes):
             routes.update({resource: route.get_methods()})
 
         return routes

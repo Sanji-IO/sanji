@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
+import six
 from collections import deque
 from mock import Mock
 from mock import MagicMock
@@ -111,7 +112,7 @@ class TestSessionClass(unittest.TestCase):
         self.session.create(message1, age=0)
         self.session.aging()
 
-        for session in self.session.session_list.itervalues():
+        for session in six.itervalues(self.session.session_list):
             session["is_published"].set()
 
         try:
