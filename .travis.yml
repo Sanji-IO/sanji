@@ -6,7 +6,7 @@ install:
 script: make tox
 env:
   - TOXENV=py27
-  - TOXENV=py36
+  - TOXENV=py35
 after_success:
   coveralls
 notifications:
