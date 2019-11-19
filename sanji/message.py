@@ -120,7 +120,8 @@ class Message(object):
     Message
     """
     def __init__(self, message, generate_id=False):
-        if isinstance(message, six.string_types):
+        if (isinstance(message, six.string_types) or
+                isinstance(message, six.binary_type)):
             try:
                 message = json.loads(message)
             except Exception:
