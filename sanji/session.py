@@ -4,6 +4,7 @@
 
 import logging
 import uuid
+import six
 
 from collections import deque
 from threading import Event
@@ -74,7 +75,7 @@ class Session(object):
 
     def resolve_send(self, mid_id):
         with self.session_lock:
-            for session in self.session_list.itervalues():
+            for session in six.itervalues(self.session_list):
                 if session["mid"] == mid_id:
                     session["status"] = Status.SENT
                     session["is_published"].set()

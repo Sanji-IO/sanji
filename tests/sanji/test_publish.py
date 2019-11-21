@@ -81,7 +81,7 @@ class TestPublishClass(unittest.TestCase):
                 self.publish.__getattribute__(method)("/test/resource",
                                                       {"test": method}, False)
                 self.conn.publish.assert_called_once_with(topic="/controller",
-                                                          qos=0,
+                                                          qos=2,
                                                           payload=ANY)
                 self.conn.publish.reset_mock()
                 self.session.create.assert_called_once_with(ANY, mid=1, age=60)
@@ -118,7 +118,7 @@ class TestPublishClass(unittest.TestCase):
             self.publish.event.get("/test/event2",
                                    {"type": "notify2", "message": "hi"})
             self.publish._conn.publish.assert_called_once_with(
-                topic="/controller", qos=0, payload=ANY)
+                topic="/controller", qos=2, payload=ANY)
 
     def test_direct(self):
         with patch("sanji.publish.Publish._wait_published") as _wait_published:

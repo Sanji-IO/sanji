@@ -74,7 +74,7 @@ class Publish(object):
                   code=200,
                   timeout=60,
                   topic="/controller",
-                  qos=0):
+                  qos=2):
 
             message = self._create_message(
                 headers={"resource": resource, "method": method, "code": code},
@@ -99,7 +99,7 @@ class Publish(object):
                   timeout=60,
                   topic="/controller",
                   tunnel=None,
-                  qos=0):
+                  qos=2):
             """
             _crud
 
@@ -149,7 +149,7 @@ class Publish(object):
 
             with self._session.session_lock:
                 mid = self._conn.publish(topic="/controller",
-                                         qos=0, payload=resp_msg.to_dict())
+                                         qos=2, payload=resp_msg.to_dict())
                 session = self._session.create(resp_msg, mid=mid, age=10)
             logging.debug("sending response as mid: %s" % mid)
             return self._wait_published(session, no_response=True)

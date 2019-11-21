@@ -120,7 +120,8 @@ class Message(object):
     Message
     """
     def __init__(self, message, generate_id=False):
-        if isinstance(message, six.string_types):
+        if (isinstance(message, six.string_types) or
+                isinstance(message, six.binary_type)):
             try:
                 message = json.loads(message)
             except Exception:
@@ -131,7 +132,7 @@ class Message(object):
             raise TypeError("Message must be JSON string or Dict")
 
         # put all prop into object
-        for (prop, value) in message.iteritems():
+        for (prop, value) in six.iteritems(message):
             setattr(self, prop, value)
 
         if generate_id is True:

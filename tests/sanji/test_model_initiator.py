@@ -17,8 +17,7 @@ try:
     sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     from sanji.model_initiator import ModelInitiator
 except ImportError:
-    print "Please check the python PATH for import test module. (%s)" \
-        % __file__
+    print("Please check the python PATH for import test module. (%s)" % __file__)
     exit(1)
 
 logger = logging.getLogger()
@@ -29,7 +28,7 @@ ERROR_STR = """Error removing %(path)s, %(error)s """
 def rmgeneric(path, __func__):
     try:
         __func__(path)
-    except OSError, (errno, strerror):
+    except (OSError, errno, strerror):
         logger.debug(ERROR_STR % {'path': path, 'error': strerror})
 
 

@@ -13,6 +13,7 @@ import os
 import threading
 import re
 import traceback
+import six
 from random import random
 from threading import Event
 from threading import Thread
@@ -134,8 +135,11 @@ class Sanji(object):
 
         try:
             for result in results:  # same route
-                map(lambda handler: ___dispatch(handler, result["message"]),
+                data = map(lambda handler: ___dispatch(
+                    handler, result["message"]),
                     result["handlers"])
+                if not isinstance(data, list):
+                    list(data)
         except Exception as e:
             _logger.error(e, exc_info=True)
 
@@ -162,10 +166,12 @@ class Sanji(object):
             for result in results:  # same route
                 resp = self.publish.create_response(
                     result["message"], self.bundle.profile["name"])
-                map(lambda handler: ___dispatch(
+                data = map(lambda handler: ___dispatch(
                     handler, result["message"], resp
                     ),
                     result["handlers"])
+                if not isinstance(data, list):
+                    list(data)
         except Exception as e:
             _logger.error(e, exc_info=True)
             resp_data = {"message": "Internal Error."}
@@ -460,7 +466,7 @@ def Route(resource=None, methods=["get", "post", "put", "delete"],
         # Ordered by declare sequence
         # http://stackoverflow.com/questions/4459531/how-to-read-class-attributes-in-the-same-order-as-declared
         f_locals = sys._getframe(1).f_locals
-        _order = len([v for v in f_locals.itervalues()
+        _order = len([v for v in six.itervalues(f_locals)
                      if hasattr(v, '__call__') and
                      hasattr(v, '__name__') and
                      v.__name__ == "wrapper"])

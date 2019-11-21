@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import os
 import sys
+import six
 import uuid
 import logging
 import simplejson as json
@@ -101,7 +102,7 @@ class Mqtt(Connection):
         """
         set_tunnels(self, tunnels):
         """
-        for tunnel_type, (tunnel, callback) in tunnels.iteritems():
+        for tunnel_type, (tunnel, callback) in six.iteritems(tunnels):
             if tunnel is None:
                 continue
             self.set_tunnel(tunnel_type, tunnel, callback)
@@ -124,7 +125,7 @@ class Mqtt(Connection):
         """
         self.client.on_publish = func
 
-    def publish(self, topic="/controller", qos=0, payload=None):
+    def publish(self, topic="/controller", qos=2, payload=None):
         """
         publish(self, topic, payload=None, qos=0, retain=False)
         Returns a tuple (result, mid), where result is MQTT_ERR_SUCCESS to
