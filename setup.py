@@ -18,7 +18,12 @@ setup(
     author_email="sanji@moxa.com",
     license="MIT",
     packages=["sanji", "sanji.connection", "sanji.model"],
-    install_requires=["voluptuous", "simplejson"],
+    install_requires=[
+        "paho-mqtt==1.5.0",
+        "simplejson==3.17.0",
+        "six==1.13.0",
+        "voluptuous==0.11.5"
+    ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
