@@ -10,6 +10,7 @@ matrix:
       env: TOXENV=py35
 install:
   - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
   - pip install tox
 script: make tox
 after_success:
