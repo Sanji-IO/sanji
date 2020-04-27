@@ -10,11 +10,16 @@ from collections import deque
 from threading import Event
 from threading import RLock
 from threading import Thread
-from time import sleep
 from time import time
 
 from sanji.message import Message
 
+try:
+    from queue import Queue
+    from queue import Empty
+except ImportError:
+    from Queue import Queue
+    from Queue import Empty
 
 _logger = logging.getLogger("sanji.sdk.session")
 
@@ -53,6 +58,7 @@ class Session(object):
         self.session_lock = RLock()
         self.timeout_queue = deque([], maxlen=10)
         self.stop_event = Event()
+        self.resolve_queue = Queue(100)
         self.thread_aging = Thread(target=self.aging)
         self.thread_aging.daemon = True
         self.thread_aging.start()
@@ -114,34 +120,44 @@ class Session(object):
 
             return session
 
+    def _aging(self):
+        with self.session_lock:
+            for session_id in self.session_list:
+                session = self.session_list[session_id]
+                # TODO: use system time diff to decrease age
+                #       instead of just - 1 ?
+                session["age"] = session["age"] - self.aging_unit
+                # age > 0
+                if session["age"] > 0:
+                    continue
+
+                # age <= 0, timeout!
+                _logger.debug("Message timeout id:%s", session_id)
+                if session["is_published"].is_set():
+                    session["status"] = Status.SEND_TIMEOUT
+                else:
+                    session["status"] = Status.RESPONSE_TIMEOUT
+                session["is_published"].set()
+                session["is_resolved"].set()
+
+                self.timeout_queue.append(session)
+
+            # remove all timeout session
+            self.session_list = dict((k, self.session_list[k]) for k
+                                     in self.session_list
+                                     if self.session_list[k]["status"] !=
+                                     Status.SEND_TIMEOUT or
+                                     self.session_list[k]["status"] !=
+                                     Status.RESPONSE_TIMEOUT)
+
     def aging(self):
         while not self.stop_event.is_set():
-            with self.session_lock:
-                for session_id in self.session_list:
-                    session = self.session_list[session_id]
-                    # TODO: use system time diff to decrease age
-                    #       instead of just - 1 ?
-                    session["age"] = session["age"] - self.aging_unit
-                    # age > 0
-                    if session["age"] > 0:
-                        continue
-
-                    # age <= 0, timeout!
-                    _logger.debug("Message timeout id:%s", session_id)
-                    if session["is_published"].is_set():
-                        session["status"] = Status.SEND_TIMEOUT
-                    else:
-                        session["status"] = Status.RESPONSE_TIMEOUT
-                    session["is_published"].set()
-                    session["is_resolved"].set()
-
-                    self.timeout_queue.append(session)
-
-                # remove all timeout session
-                self.session_list = dict((k, self.session_list[k]) for k
-                                         in self.session_list
-                                         if self.session_list[k]["status"] !=
-                                         Status.SEND_TIMEOUT or
-                                         self.session_list[k]["status"] !=
-                                         Status.RESPONSE_TIMEOUT)
-            sleep(self.aging_unit)
+            try:
+                mid = self.resolve_queue.get(
+                    block=True, timeout=self.aging_unit)
+                # resolve send message by mid feeding from on_publish
+                with self.session_lock:
+                    self.resolve_send(mid)
+            except Empty:
+                # aging when nothing need to be resolved
+                self._aging()
