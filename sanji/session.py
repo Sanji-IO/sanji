@@ -151,13 +151,21 @@ class Session(object):
                                      Status.RESPONSE_TIMEOUT)
 
     def aging(self):
+        counter = 0
         while not self.stop_event.is_set():
             try:
                 mid = self.resolve_queue.get(
                     block=True, timeout=self.aging_unit)
+                counter = counter + 1
                 # resolve send message by mid feeding from on_publish
                 with self.session_lock:
                     self.resolve_send(mid)
             except Empty:
                 # aging when nothing need to be resolved
                 self._aging()
+                counter = 0
+
+            # make sure perform _aging per 100 resolved messages
+            if counter > 100:
+                self._aging()
+                counter = 0
