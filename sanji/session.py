@@ -164,8 +164,8 @@ class Session(object):
                 # aging when nothing need to be resolved
                 self._aging()
                 counter = 0
-
-            # make sure perform _aging per 100 resolved messages
-            if counter > 100:
-                self._aging()
-                counter = 0
+            else:
+                # make sure perform _aging per 100 resolved messages
+                if counter > 100:
+                    self._aging()
+                    counter = 0
