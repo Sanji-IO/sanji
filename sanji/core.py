@@ -31,8 +31,10 @@ from sanji.bundle import Bundle
 
 try:
     from queue import Queue
+    from queue import Full
 except ImportError:
     from Queue import Queue
+    from Queue import Full
 
 _logger = logging.getLogger("sanji.sdk")
 
@@ -206,8 +208,10 @@ class Sanji(object):
             self.req_queue.put(message.to_event())
 
     def on_publish(self, client, userdata, mid):
-        with self._session.session_lock:
-            self._session.resolve_send(mid)
+        try:
+            self._session.resolve_queue.put_nowait(mid)
+        except Full:
+            _logger.debug("on_publish can't push mid into queue")
 
     def _create_thread_pool(self):
 

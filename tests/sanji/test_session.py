@@ -27,9 +27,8 @@ except ImportError:
 
 class TestSessionClass(unittest.TestCase):
 
-    @patch("sanji.session.sleep")
     @patch("sanji.session.Thread")
-    def setUp(self, Thread, sleep):
+    def setUp(self, Thread):
         self.thread_mock = Thread.return_value = MagicMock()
         self.thread_mock.is_alive.return_value = True
         self.session = Session()
@@ -90,8 +89,7 @@ class TestSessionClass(unittest.TestCase):
         self.session.stop()
         self.thread_mock.join.assert_called_once_with()
 
-    @patch("sanji.session.sleep")
-    def test_aging(self, sleep):
+    def test_aging(self):
         self.session.stop()
 
         message1 = Message({}, generate_id=True)
